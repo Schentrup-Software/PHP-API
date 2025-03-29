@@ -1,19 +1,20 @@
 {
-    "name": "buonzz/composer-library-template",
-    "description": "Boilerplate package for creating other packages.",
+    "name": "schentrup-software/php-api",
+    "description": "A basic api framework for PHP. It uses classes for request and responses to make a self documenting API.",
     "keywords": [
-        "template",
-        "composer",
-        "package"
+        "API",
+        "Framewaork",
+        "REST"
     ],
     "license": "MIT",
+    "version": "1.0.0",
     "authors": [
         {
-            "name": "Darwin Biler",
-            "email": "buonzz@gmail.com"
+            "name": "joeySchentrup",
+            "email": "joey@schentrupsoftware.com"
         }
     ],
-    "type": "project",
+    "type": "library",
     "require": {
         "php": ">=8.1",
         "pmjones/auto-route": "^2.0",
@@ -24,12 +25,12 @@
     },
     "autoload": {
         "psr-4": {
-            "Buonzz\\Template\\": "src/"
+            "PhpApi\\": "src/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "Buonzz\\Template\\Tests\\": "tests/"
+            "PhpApi\\Tests\\": "tests/"
         }
     }
 }
