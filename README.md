@@ -1,15 +1,12 @@
-Composer Library Template
-=========================
+# PHP API
 
-If you are trying to create a new PHP Composer library, whether it will be going to submitted to packagist.org or just in your Github account, this template of files will surely help you make the process a lot easier and faster.
+A basic api framework for PHP. It uses classes for request and responses to make a self documenting API. It uses [pmjones/AutoRoute](https://github.com/pmjones/AutoRoute) for routing and [sapienphp/sapien](https://github.com/sapienphp/sapien) for request and response objects.
 
-Features
---------
-
-* PSR-4 autoloading compliant structure
-* Unit-Testing with PHPUnit
-* Comprehensive Guides and tutorial
-* Easy to use to any framework or even a plain php file
-
-
-I encourage that you put more information on this readme file instead of leaving it as is. See [How to make a README file](http://www.darwinbiler.com/designing-and-making-the-readme-file-for-your-github-repository/) for more info.
+## TODO
+ - [ ] Routing
+ - [ ] Request objects
+ - [ ] Response objects
+ - [ ] Sample project
+ - [ ] Auto generating Swagger documention
+ - [ ] Documention
+ - [ ] Publish as composer package
