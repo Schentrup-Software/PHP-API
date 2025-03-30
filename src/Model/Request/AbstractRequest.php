@@ -54,8 +54,6 @@ abstract class AbstractRequest
                 && isset($this->request->json[$name])
             ) {
                 $this->{$property->getName()} = $this->request->json[$name];
-            } else {
-                $this->{$property->getName()} = null; // or some default value
             }
         }
     }
