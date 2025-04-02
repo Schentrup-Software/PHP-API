@@ -4,6 +4,7 @@ namespace PhpApi;
 
 use AutoRoute\AutoRoute;
 use InvalidArgumentException;
+use PhpApi\Model\Response\AbstractResponse;
 use PhpApi\Model\RouterOptions;
 use ReflectionClass;
 use Sapien\Request;
@@ -75,6 +76,12 @@ class Router
                 }
 
                 $response = $action->$method(...$arguments);
+
+                if (!($response instanceof AbstractResponse)) {
+                    throw new InvalidArgumentException("Method $method must return an instance of " . AbstractResponse::class);
+                }
+
+                $response->sendResponse();
                 break;
         }
     }
