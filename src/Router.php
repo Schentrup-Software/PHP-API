@@ -4,6 +4,7 @@ namespace PhpApi;
 
 use AutoRoute\AutoRoute;
 use InvalidArgumentException;
+use PhpApi\Enum\MiddlewareTypes;
 use PhpApi\Model\Response\AbstractResponse;
 use PhpApi\Model\RouterOptions;
 use ReflectionClass;
@@ -15,9 +16,12 @@ class Router
 {
     protected AutoRoute $autoRoute;
 
+    /** @var array<int, callable[]> $middlewares */
+    private array $middlewares = [];
+
     public function __construct(
-        private readonly RouterOptions $routerOptions,
-        private readonly mixed $controllerFactory = null,
+        private RouterOptions $routerOptions,
+        private mixed $controllerFactory = null,
     )
     {
         if ($this->controllerFactory === null) {
@@ -37,6 +41,19 @@ class Router
             wordSeparator: $this->routerOptions->wordSeparator,
             ignoreParams: 1,
         );
+    }
+
+    public function addMiddleware(MiddlewareTypes $type, callable $middleware): void
+    {
+        if (!isset($this->middlewares[$type->value])) {
+            $this->middlewares[$type->value] = [];
+        }
+        
+        if (!is_callable($middleware)) {
+            throw new InvalidArgumentException('Middleware must be callable');
+        }
+
+        $this->middlewares[$type->value][] = $middleware;
     }
 
     public function route(?Request $request = null): void
