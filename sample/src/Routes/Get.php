@@ -1,6 +1,6 @@
 <?php
 
-namespace SchentrupSoftware\PhpApiSample;
+namespace PhpApiSample\Routes;
 
 use PhpApi\Model\Response\AbstractJsonResponse;
 

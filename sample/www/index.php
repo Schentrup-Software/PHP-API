@@ -4,11 +4,14 @@ require_once __DIR__ . '/../vendor/autoload.php';
 
 use PhpApi\Router;
 use PhpApi\Model\RouterOptions;
+use PhpApiSample\Routes\Get;
 
 $router = new Router(
     new RouterOptions(
-        namespace: 'SchentrupSoftware\\PhpApiSample',
+        namespace: 'PhpApiSample\\Routes',
+        directory: __DIR__ . '/../src/routes',
     )
 );
 
+$get = new Get();
 $router->route();

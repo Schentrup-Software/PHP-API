@@ -2,29 +2,25 @@
 
 namespace PhpApi\Enum;
 
+use AutoRoute\Exception\Exception;
 use AutoRoute\Exception\InvalidArgument;
 use AutoRoute\Exception\MethodNotAllowed;
 use AutoRoute\Exception\NotFound;
 
-enum MiddlewareTypes: int
+enum RouterExceptions: int
 {
-    // Router errors
     case InvalidArgumentException = 0;
     case NotFoundException = 1;
     case MethodNotAllowedException = 2;
     case RouterServerError = 3;
 
-    // Regular middleware
-    case Prerequest = 4;
-    case Postrequest = 5;
-
-    public static function fromRouterException(Exception $exception): self
+    public static function fromRouterException(string $exception): self
     {
-        if ($exception instanceof InvalidArgument) {
+        if ($exception === InvalidArgument::class) {
             return self::InvalidArgumentException;
-        } elseif ($exception instanceof NotFound) {
+        } elseif ($exception === NotFound::class) {
             return self::NotFoundException;
-        } elseif ($exception instanceof MethodNotAllowed) {
+        } elseif ($exception === MethodNotAllowed::class) {
             return self::MethodNotAllowedException;
         } else {
             return self::RouterServerError;

@@ -1,6 +1,6 @@
 <?php
 
-namespace SchentrupSoftware\PhpApiSample\Utility;
+namespace PhpApi\Utility;
 
 class Arrays
 {

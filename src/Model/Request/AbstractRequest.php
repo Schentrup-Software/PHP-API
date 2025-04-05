@@ -1,6 +1,6 @@
 <?php
 
-namespace SchentrupSoftware\PhpApiSample\Model\Request;
+namespace PhpApi\Model\Request;
 
 use ReflectionClass;
 use Sapien\Request;
