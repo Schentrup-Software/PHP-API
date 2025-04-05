@@ -30,7 +30,7 @@
     },
     "autoload-dev": {
         "psr-4": {
-            "PhpApi\\Tests\\": "tests/"
+            "PhpApi\\Test\\": "tests/"
         }
     }
 }
