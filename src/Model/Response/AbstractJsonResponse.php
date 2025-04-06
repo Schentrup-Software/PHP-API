@@ -3,11 +3,12 @@
 namespace PhpApi\Model\Response;
 
 use PhpApi\Enum\ContentType;
+use ReflectionProperty;
 
 class AbstractJsonResponse extends AbstractResponse
 {
     /**
-     * @param ReflectionProperty[] $properties  
+     * @param ReflectionProperty[] $propertyValues
      */
     public function fillResponse(array $propertyValues): void
     {

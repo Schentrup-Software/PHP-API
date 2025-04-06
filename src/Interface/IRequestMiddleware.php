@@ -2,7 +2,7 @@
 
 namespace PhpApi\Interface;
 
-use SchentrupSoftware\PhpApiSample\Model\Request\AbstractRequest;
+use PhpApi\Model\Request\AbstractRequest;
 
 interface IRequestMiddleware
 {

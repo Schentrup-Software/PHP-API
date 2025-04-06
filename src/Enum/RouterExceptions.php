@@ -2,7 +2,6 @@
 
 namespace PhpApi\Enum;
 
-use AutoRoute\Exception\Exception;
 use AutoRoute\Exception\InvalidArgument;
 use AutoRoute\Exception\MethodNotAllowed;
 use AutoRoute\Exception\NotFound;
@@ -14,7 +13,7 @@ enum RouterExceptions: int
     case MethodNotAllowedException = 2;
     case RouterServerError = 3;
 
-    public static function fromRouterException(string $exception): self
+    public static function fromRouterException(?string $exception): self
     {
         if ($exception === InvalidArgument::class) {
             return self::InvalidArgumentException;

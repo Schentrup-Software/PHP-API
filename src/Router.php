@@ -1,8 +1,9 @@
-<?php 
+<?php
 
 namespace PhpApi;
 
 use AutoRoute\AutoRoute;
+use Closure;
 use InvalidArgumentException;
 use PhpApi\Enum\RouterExceptions;
 use PhpApi\Interface\IRequestMiddleware;
@@ -13,6 +14,7 @@ use PhpApi\Model\RouterOptions;
 use PhpApi\Utility\Arrays;
 use ReflectionClass;
 use ReflectionFunction;
+use ReflectionNamedType;
 use Sapien\Request;
 use Sapien\Response;
 
@@ -20,7 +22,7 @@ class Router
 {
     protected AutoRoute $autoRoute;
 
-    /** @var IRequestMiddleware[]> $requestMiddlewares */
+    /** @var IRequestMiddleware[] $requestMiddlewares */
     private array $requestMiddlewares = [];
 
     /** @var IResponseMiddleware[] $responseMiddlewares */
@@ -60,23 +62,25 @@ class Router
         }
 
         $route = $this->autoRoute->getRouter()
-            ->route($request->method->name, $request->url->path);
+            ->route($request->method->name ?? 'GET', $request->url->path ?? '');
 
         if ($route->error != null) {
             $routerException = RouterExceptions::fromRouterException($route->error);
             $errorHandler = $this->errorHandlers[$routerException->value] ?? null;
             if ($errorHandler === null) {
-                $errorHandler = fn () => $this->defaultErrorHandler();
+                $errorHandler = fn ($r) => $this->defaultErrorHandler();
             }
 
             print_r($route->messages);
 
-            $response = $errorHandler($route->error);
+            $response = $errorHandler($request);
             if ($response instanceof Response) {
                 $response->send();
             } else {
                 throw new InvalidArgumentException("Error handler must return a Response object");
             }
+
+            return;
         }
 
         $action = ($this->controllerFactory)($route->class);
@@ -90,23 +94,30 @@ class Router
 
         $methodReflection = $actionReflection->getMethod($method);
         if (!$methodReflection->isPublic()) {
-            throw new InvalidArgumentException("Method $method is not public in class $route->class"); 
+            throw new InvalidArgumentException("Method $method is not public in class $route->class");
         }
 
         $parameter = Arrays::getFirstElement($methodReflection->getParameters());
-        if ($parameter !== null && $parameter->getType() !== null && !$parameter->getType()->isBuiltin()) {
-            $parameterClass = $parameter->getType()->getName();
-            $paramerClassReflection = new ReflectionClass($parameterClass);
-            if (!$paramerClassReflection->isSubclassOf(AbstractRequest::class)) {
-                throw new InvalidArgumentException("Parameter $parameterClass is not a subclass of " . AbstractRequest::class);
-            }
-            $request = new $parameterClass($request);
-
-            foreach ($this->requestMiddlewares as $middleware) {
-                $request = $middleware->handleRequest($request);
+        if ($parameter !== null) {
+            $parameterType = $parameter->getType();
+            if (!($parameterType instanceof ReflectionNamedType)) {
+                throw new InvalidArgumentException("Parameter type must be a named type. Cannot be null or union type");
             }
 
-            $arguments = array_merge([$request], $arguments);
+            if (!$parameterType->isBuiltin()) {
+                $parameterClass = $parameterType->getName();
+                $paramerClassReflection = new ReflectionClass($parameterClass);
+                if (!$paramerClassReflection->isSubclassOf(AbstractRequest::class)) {
+                    throw new InvalidArgumentException("Parameter $parameterClass is not a subclass of " . AbstractRequest::class);
+                }
+                $request = new $parameterClass($request);
+
+                foreach ($this->requestMiddlewares as $middleware) {
+                    $request = $middleware->handleRequest($request);
+                }
+
+                $arguments = array_merge([$request], $arguments);
+            }
         }
 
         $response = $action->$method(...$arguments);
@@ -126,8 +137,8 @@ class Router
     {
         if ($middleware instanceof IRequestMiddleware) {
             $this->requestMiddlewares[] = $middleware;
-        } 
-        
+        }
+
         if ($middleware instanceof IResponseMiddleware) {
             $this->responseMiddlewares[] = $middleware;
         }
@@ -135,12 +146,12 @@ class Router
         return $this;
     }
 
-    public function handleInvalidArgument(Response|callable $handler): self
+    public function handleInvalidArgument(Response|Closure $handler): self
     {
         return $this->handleException(RouterExceptions::InvalidArgumentException, $handler);
     }
 
-    public function handleNotFound(string|Response|callable $handler): self
+    public function handleNotFound(string|Response|Closure $handler): self
     {
         $response = null;
 
@@ -148,33 +159,34 @@ class Router
             $response = new Response();
             $response->setCode(404);
             $response->setHeader('location', $handler);
+            return $this->handleException(RouterExceptions::NotFoundException, $response);
+        } else {
+            return $this->handleException(RouterExceptions::NotFoundException, $handler);
         }
-
-        return $this->handleException(RouterExceptions::NotFoundException, $response ?? $handler);
     }
 
-    public function handleMethodNotAllowed(Response|callable $handler): self
+    public function handleMethodNotAllowed(Response|Closure $handler): self
     {
         return $this->handleException(RouterExceptions::MethodNotAllowedException, $handler);
     }
 
-    public function handleServerError(Response|callable $handler): self
+    public function handleServerError(Response|Closure $handler): self
     {
         return $this->handleException(RouterExceptions::RouterServerError, $handler);
     }
 
     private function handleException(
-        RouterExceptions $exception, 
-        Response|callable $handler
+        RouterExceptions $exception,
+        Response|Closure $handler
     ): self {
         $result = null;
 
-        if (is_callable($handler)) {
+        if ($handler instanceof Closure) {
             $relectionFunction = new ReflectionFunction($handler);
             $parameters = $relectionFunction->getParameters();
-            $parameter = Arrays::getFirstElement($parameters);
-            
-            if ($parameter?->getType()?->getName() !== Request::class) {
+            $parameter = Arrays::getFirstElement($parameters)?->getType();
+
+            if ($parameter instanceof ReflectionNamedType && $parameter->getName() !== Request::class) {
                 throw new InvalidArgumentException('Handler must accept a Request object');
             }
 
@@ -183,7 +195,7 @@ class Router
             $result = fn (Request $request) => $handler;
         } else {
             throw new InvalidArgumentException('Handler must be a callable, string or Response object');
-            
+
         }
 
         $this->errorHandlers[$exception->value] = $result;

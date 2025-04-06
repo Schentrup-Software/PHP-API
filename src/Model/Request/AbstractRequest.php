@@ -44,16 +44,26 @@ abstract class AbstractRequest
                 $name = $property->getName();
             }
 
-            if ((isset($queryParam) || in_array($this->request->method->name, HttpMethod::getQueryOnlyMethods())) 
-                && isset($this->request->query[$name])
+            $queryParamValue = $this->request->query[$name] ?? null;
+            if ((isset($queryParam) || in_array($this->request->method->name, HttpMethod::getQueryOnlyMethods()))
+                && isset($queryParamValue)
             ) {
-                $this->{$property->getName()} = $this->request->query[$name];
-            } elseif (isset($requestParam) && isset($this->request->input[$name])) {
-                $this->{$property->getName()} = $this->request->input[$name];
-            } elseif ((isset($jsonParam) || !in_array($this->request->method->name, HttpMethod::getQueryOnlyMethods()))
-                && isset($this->request->json[$name])
+                $this->{$property->getName()} = $queryParamValue;
+                continue;
+            }
+
+            $inputValue = $this->request->input[$name] ?? null;
+            if (isset($requestParam) && isset($inputValue)) {
+                $this->{$property->getName()} = $inputValue;
+                continue;
+            }
+
+            $jsonParamValue = $this->request->json[$name] ?? null;
+            if ((isset($jsonParam) || !in_array($this->request->method->name, HttpMethod::getQueryOnlyMethods()))
+                && isset($jsonParamValue)
             ) {
                 $this->{$property->getName()} = $this->request->json[$name];
+                continue;
             }
         }
     }

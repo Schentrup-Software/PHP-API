@@ -6,6 +6,7 @@ use PhpApi\Enum\CommonHeader;
 use PhpApi\Enum\ContentType;
 use ReflectionClass;
 use ReflectionProperty;
+use RuntimeException;
 use Sapien\Response;
 
 abstract class AbstractResponse extends Response
@@ -14,6 +15,10 @@ abstract class AbstractResponse extends Response
     {
         $thisClass = new ReflectionClass($this);
         $parentClass = $thisClass->getParentClass();
+
+        if ($parentClass === false) {
+            throw new RuntimeException('No parent class found for ' . $thisClass->getName());
+        }
 
         $properties = $thisClass->getProperties();
         $inheritedProperties = $parentClass->getProperties();
@@ -24,9 +29,9 @@ abstract class AbstractResponse extends Response
         $this->setHeader(CommonHeader::CONTENT_TYPE->value, $this->getContentType()->value);
         $this->send();
     }
-    
+
     /**
-     * @param ReflectionProperty[] $properties  
+     * @param ReflectionProperty[] $properties
      */
     abstract public function fillResponse(array $properties): void;
 
