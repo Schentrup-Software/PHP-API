@@ -36,7 +36,8 @@
         }
     },
     "scripts": {
-        "phan": "PHAN_DISABLE_XDEBUG_WARN=1 PHAN_ALLOW_XDEBUG=1 vendor/bin/phan -o .phan/phan.log || cat .phan/phan.log",
-        "cs-fixer": "PHP_CS_FIXER_IGNORE_ENV=1 vendor/bin/php-cs-fixer fix src"
+        "analyse": "PHAN_DISABLE_XDEBUG_WARN=1 PHAN_ALLOW_XDEBUG=1 vendor/bin/phan -o .phan/phan.log || cat .phan/phan.log",
+        "lint": "PHP_CS_FIXER_IGNORE_ENV=1 vendor/bin/php-cs-fixer fix src",
+        "test": "vendor/bin/phpunit --testdox tests"
     }
 }
