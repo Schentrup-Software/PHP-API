@@ -1,6 +1,6 @@
 <?php
 
-namespace SchentrupSoftware\PhpApiSample\Enum;
+namespace PhpApi\Enum;
 
 enum HttpMethod: string
 {

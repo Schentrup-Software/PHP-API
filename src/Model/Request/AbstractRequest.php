@@ -2,12 +2,12 @@
 
 namespace PhpApi\Model\Request;
 
+use PhpApi\Enum\HttpMethod;
+use PhpApi\Model\Request\Attribute\InputParam;
+use PhpApi\Model\Request\Attribute\JsonRequestParam;
+use PhpApi\Model\Request\Attribute\QueryParam;
 use ReflectionClass;
 use Sapien\Request;
-use SchentrupSoftware\PhpApiSample\Enum\HttpMethod;
-use SchentrupSoftware\PhpApiSample\Model\Request\Attribute\QueryParam;
-use SchentrupSoftware\PhpApiSample\Model\Request\Attribute\InputParam;
-use SchentrupSoftware\PhpApiSample\Model\Request\Attribute\JsonRequestParam;
 
 abstract class AbstractRequest
 {

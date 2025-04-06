@@ -96,9 +96,8 @@ class Router
             throw new InvalidArgumentException("Method $method is not public in class $route->class");
         }
 
-        $parameter = Arrays::getFirstElement($methodReflection->getParameters());
-        if ($parameter !== null) {
-            $parameterType = $parameter->getType();
+        $parameterType = Arrays::getFirstElement($methodReflection->getParameters())?->getType();
+        if ($parameterType !== null) {
             if (!($parameterType instanceof ReflectionNamedType)) {
                 throw new InvalidArgumentException("Parameter type must be a named type. Cannot be null or union type");
             }
@@ -117,6 +116,8 @@ class Router
 
                 $arguments = array_merge([$request], $arguments);
             }
+        } else {
+            $arguments = array_merge([null], $arguments);
         }
 
         $response = $action->$method(...$arguments);

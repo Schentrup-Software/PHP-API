@@ -1,6 +1,6 @@
 <?php
 
-namespace SchentrupSoftware\PhpApiSample\Model\Request\Attribute;
+namespace PhpApi\Model\Request\Attribute;
 
 use Attribute;
 
