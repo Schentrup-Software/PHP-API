@@ -15,8 +15,7 @@ abstract class AbstractRequest
 
     public function __construct(
         Request $request,
-    )
-    {
+    ) {
         $this->request = $request;
 
         $releactionClass = new ReflectionClass(static::class);

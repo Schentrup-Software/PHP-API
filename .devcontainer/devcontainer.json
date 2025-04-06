@@ -24,7 +24,8 @@
         "vscode": {
             "extensions": [
                 "EditorConfig.EditorConfig",
-                "recca0120.vscode-phpunit"
+                "recca0120.vscode-phpunit",
+                "junstyle.php-cs-fixer"
             ]
         }
     },

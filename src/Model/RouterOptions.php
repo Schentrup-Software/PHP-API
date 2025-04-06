@@ -11,5 +11,6 @@ class RouterOptions
         public readonly string $method = 'execute',
         public readonly string $suffix = '',
         public readonly string $wordSeparator = '-',
-    ) { }
+    ) {
+    }
 }

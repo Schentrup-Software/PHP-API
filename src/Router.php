@@ -34,8 +34,7 @@ class Router
     public function __construct(
         private RouterOptions $routerOptions,
         private mixed $controllerFactory = null,
-    )
-    {
+    ) {
         if ($this->controllerFactory === null) {
             $this->controllerFactory = function (string $className) {
                 return new $className();
@@ -88,7 +87,7 @@ class Router
         $arguments = $route->arguments;
 
         $actionReflection = new ReflectionClass($action);
-        if (!$actionReflection->hasMethod($method) ) {
+        if (!$actionReflection->hasMethod($method)) {
             throw new InvalidArgumentException("Method $method not found in class $route->class");
         }
 
@@ -195,14 +194,14 @@ class Router
             $result = fn (Request $request) => $handler;
         } else {
             throw new InvalidArgumentException('Handler must be a callable, string or Response object');
-
         }
 
         $this->errorHandlers[$exception->value] = $result;
         return $this;
     }
 
-    private function defaultErrorHandler(): Response {
+    private function defaultErrorHandler(): Response
+    {
         $response = new Response();
         $response->setCode(500);
         $response->setHeader('Content-Type', 'application/json');

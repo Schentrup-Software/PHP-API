@@ -5,11 +5,11 @@ namespace PhpApi\Utility;
 class Arrays
 {
     /**
-     * 
-     * @param T[] $array 
+     *
+     * @param T[] $array
      * @return ?T
      * @template T
-     * @description Returns the first element of an array or null if the array is empty. 
+     * @description Returns the first element of an array or null if the array is empty.
      */
     public static function getFirstElement(array $array): mixed
     {
