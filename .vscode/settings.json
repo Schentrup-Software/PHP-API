@@ -1,0 +1,5 @@
+{
+    "php-cs-fixer.executablePath": "/workspaces/PHP-API/vendor/bin/php-cs-fixer",
+    "php-cs-fixer.ignorePHPVersion": true,
+    "php-cs-fixer.onsave": true
+}
