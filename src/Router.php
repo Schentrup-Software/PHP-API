@@ -11,6 +11,7 @@ use PhpApi\Interface\IResponseMiddleware;
 use PhpApi\Model\Request\AbstractRequest;
 use PhpApi\Model\Response\AbstractResponse;
 use PhpApi\Model\RouterOptions;
+use PhpApi\Swagger\GenerateSwaggerDocs;
 use PhpApi\Utility\Arrays;
 use ReflectionClass;
 use ReflectionFunction;
@@ -20,6 +21,13 @@ use Sapien\Response;
 
 class Router
 {
+    public const StaticRoutes = [
+        'GET' => [
+            '/swagger' => 'handleSwaggerPage',
+            '/swagger/json' => 'handleSwaggerJson',
+        ],
+    ];
+
     protected AutoRoute $autoRoute;
 
     /** @var IRequestMiddleware[] $requestMiddlewares */
@@ -31,6 +39,9 @@ class Router
     /** @var array<int, callable> $errorHandlers */
     private array $errorHandlers = [];
 
+    /**
+     * @param callable|null $controllerFactory
+     */
     public function __construct(
         private RouterOptions $routerOptions,
         private mixed $controllerFactory = null,
@@ -58,6 +69,12 @@ class Router
     {
         if ($request === null) {
             $request = new Request();
+        }
+
+        if (isset(self::StaticRoutes[$request->method->name][$request->url->path])) {
+            $method = self::StaticRoutes[$request->method->name][$request->url->path];
+            $this->$method();
+            return;
         }
 
         $route = $this->autoRoute->getRouter()
@@ -211,5 +228,26 @@ class Router
         ]));
 
         return $response;
+    }
+
+    private function handleSwaggerJson(): void
+    {
+        $response = new Response();
+        $response->setCode(200);
+        $response->setHeader('Content-Type', 'application/json');
+        $response->setContent((new GenerateSwaggerDocs(
+            $this->autoRoute,
+            $this->routerOptions,
+        ))->generate());
+        $response->send();
+    }
+
+    private function handleSwaggerPage(): void
+    {
+        $response = new Response();
+        $response->setCode(200);
+        $response->setHeader('Content-Type', 'text/html');
+        $response->setContent(file_get_contents(__DIR__ . '/../swagger/index.html'));
+        $response->send();
     }
 }
