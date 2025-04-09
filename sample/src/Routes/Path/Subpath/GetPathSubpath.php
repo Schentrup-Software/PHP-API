@@ -6,11 +6,11 @@ use PhpApi\Model\Response\AbstractJsonResponse;
 
 class GetPathSubpath
 {
-    public function execute($_, int $pathVar): GetResponse
+    public function execute($_, int $pathVar2): GetResponse
     {
         $response = new GetResponse(
             message: 'Hello World 2',
-            pathVar: $pathVar,
+            pathVar: $pathVar2,
         );
         $response->setCode(200);
         return $response;

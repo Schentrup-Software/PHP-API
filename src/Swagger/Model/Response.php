@@ -5,11 +5,11 @@ namespace PhpApi\Swagger\Model;
 class Response
 {
     /**
-     * @param array<string, ResponseContent> $content
+     * @param (array<string, ResponseContent>|null) $content
      */
     public function __construct(
-        public string $description,
-        public array $content,
+        public readonly string $description,
+        public readonly ?array $content = null,
     ) {
     }
 }
