@@ -13,9 +13,9 @@ class SwaggerDoc
     public function __construct(
         public readonly string $openapi,
         public readonly Info $info,
-        public readonly ExternalDocs $externalDocs,
-        public readonly array $servers,
-        public readonly array $tags,
+        public readonly ?ExternalDocs $externalDocs,
+        public readonly ?array $servers,
+        public readonly ?array $tags,
         public readonly array $paths,
     ) {
     }

@@ -19,6 +19,8 @@ class GetPath
 
 class GetResponse extends AbstractJsonResponse
 {
+    public const ResponseCode = 200;
+
     public function __construct(
         public int $pathVar,
         public string $message = 'Hello World',

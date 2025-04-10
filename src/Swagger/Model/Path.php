@@ -18,8 +18,8 @@ class Path
         public string $description,
         public string $operationId,
         public array $parameters,
-        public RequestBody $requestBody,
-        public array $responses,
+        public ?RequestBody $requestBody,
+        public ?array $responses,
     ) {
     }
 }

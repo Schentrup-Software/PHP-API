@@ -13,12 +13,17 @@ use PhpApi\Model\Response\AbstractResponse;
 use PhpApi\Model\Response\ResponseParser;
 use PhpApi\Model\RouterOptions;
 use PhpApi\Swagger\Model\ContentType;
+use PhpApi\Swagger\Model\ExternalDocs;
+use PhpApi\Swagger\Model\Info;
 use PhpApi\Swagger\Model\Parameter;
+use PhpApi\Swagger\Model\Path;
 use PhpApi\Swagger\Model\RequestBody;
 use PhpApi\Swagger\Model\RequestObjectParseResults;
 use PhpApi\Swagger\Model\Response;
 use PhpApi\Swagger\Model\ResponseContent;
 use PhpApi\Swagger\Model\Schema;
+use PhpApi\Swagger\Model\Servers;
+use PhpApi\Swagger\Model\SwaggerDoc;
 use PhpApi\Utility\Arrays;
 use ReflectionClass;
 use ReflectionException;
@@ -38,16 +43,40 @@ class GenerateSwaggerDocs
     {
         $urls = $this->autoRoute->getDumper()->dump();
         $swaggerDocs = $this->generateSwagger($urls);
-        return json_encode($swaggerDocs);
+
+        $toArray = function ($swaggerDoc) use (&$toArray) {
+            return array_map(
+                fn ($p) => is_object($p)
+                    ? $toArray($p)
+                    : (is_array($p)
+                        ? array_map($toArray, $p)
+                        : $p),
+                (array) $swaggerDoc
+            );
+        };
+
+        $swaggerDocArray = $toArray($swaggerDocs);
+
+        $withoutNull = function ($a) use (&$withoutNull) {
+            return array_filter(
+                array_map(
+                    fn ($p) => is_array($p) ? $withoutNull($p) : $p,
+                    $a
+                ),
+                fn ($p) => !empty($p)
+            );
+        };
+        $swaggerDocArray = $withoutNull($swaggerDocArray);
+
+        return json_encode($swaggerDocArray);
     }
 
     /**
      * @param array<string, array<string, string>> $urls url[path][httpMethod] = class
-     * @return array
      */
-    private function generateSwagger(array $urls): array
+    private function generateSwagger(array $urls): SwaggerDoc
     {
-        $swagger = [];
+        $paths = [];
         foreach ($urls as $path => $methods) {
             foreach ($methods as $method => $class) {
                 $reflectionClass = new ReflectionClass($class);
@@ -59,6 +88,7 @@ class GenerateSwaggerDocs
 
                 $pathVariables = [];
                 preg_match_all('/\{([^}]+)\}/', $path, $pathVariables);
+                $cleanPath = $path;
 
                 /** @var Parameter[] $parameters */
                 $parameters = [];
@@ -69,9 +99,10 @@ class GenerateSwaggerDocs
                         in: 'path',
                         required: true,
                         schema: new Schema(
-                            type: $parsedTypeVariable[0],
+                            type: $this->basicPhpTypeToSwaggerType($parsedTypeVariable[0]),
                         ),
                     );
+                    $cleanPath = str_replace($parsedTypeVariable[0] . ":", "", $cleanPath);
                 }
 
                 $requestObject = Arrays::getFirstElement($reflectionMethod->getParameters())?->getType();
@@ -88,12 +119,45 @@ class GenerateSwaggerDocs
                     throw new InvalidArgumentException("Intersection types are not supported");
                 }
 
-                echo $method . ' ' . $path . '<br>';
-                echo 'Class: ' . $class . '<br>';
-                echo 'Method: ' . $reflectionMethod->getName() . '<br>';
+                $description = $reflectionMethod->getDocComment();
+                if ($description == false) {
+                    $description = $reflectionMethod->getName();
+                }
+
+                $paths[$cleanPath][strtolower($method)] = new Path(
+                    tags: [],
+                    summary: $description,
+                    description: $description,
+                    operationId: $method . '_' . $reflectionClass->getName(),
+                    parameters: $parameters,
+                    requestBody: $requestBody ?? null,
+                    responses: $responses ?? null,
+                );
             }
         }
-        return $swagger;
+        return new SwaggerDoc(
+            openapi: '3.0.4',
+            info: new Info(
+                title: 'API Documentation',
+                description: 'API Documentation',
+                termsOfService: 'https://example.com/terms',
+                contact: null,
+                license: null,
+                version: '1.0.0',
+            ),
+            externalDocs: new ExternalDocs(
+                url: 'https://example.com',
+                description: 'External Docs',
+            ),
+            servers: [
+                new Servers(
+                    url: 'https://localhost:8080',
+                    description: 'Server',
+                ),
+            ],
+            tags: [],
+            paths: $paths,
+        );
     }
 
     /**
@@ -254,7 +318,7 @@ class GenerateSwaggerDocs
             }
 
             $parsedTypeData[$responseCode] = new Response(
-                description: $relectionClass->getConstant('description'),
+                description: $relectionClass->getName(),
                 content: [
                     $contentType->value => new ResponseContent(
                         $this->getSchemaFromClass($reflectionType)
@@ -270,7 +334,7 @@ class GenerateSwaggerDocs
     {
         if ($reflectionType->isBuiltin()) {
             return new Schema(
-                type: $reflectionType->getName(),
+                type: $this->basicPhpTypeToSwaggerType($reflectionType->getName()),
             );
         }
 
@@ -297,5 +361,16 @@ class GenerateSwaggerDocs
             type: 'object',
             properties: $properties,
         );
+    }
+
+    private function basicPhpTypeToSwaggerType(string $type): string
+    {
+        return match ($type) {
+            'int' => 'integer',
+            'float' => 'number',
+            'string' => 'string',
+            'bool' => 'boolean',
+            default => throw new InvalidArgumentException("Unsupported type: " . $type),
+        };
     }
 }
