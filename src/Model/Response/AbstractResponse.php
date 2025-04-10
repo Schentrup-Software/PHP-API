@@ -11,22 +11,25 @@ use Sapien\Response;
 
 abstract class AbstractResponse extends Response
 {
+    /** @var ContentType ContentType */
+    public const ContentType = self::ContentType;
+    /** @var int ResponseCode */
+    public const ResponseCode = self::ResponseCode;
+
     public function sendResponse(): void
     {
-        $thisClass = new ReflectionClass($this);
-        $parentClass = $thisClass->getParentClass();
-
-        if ($parentClass === false) {
-            throw new RuntimeException('No parent class found for ' . $thisClass->getName());
+        if (!in_array($this::ContentType, ContentType::cases(), true)) {
+            throw new RuntimeException('Content type is not set for ' . $this::class);
         }
 
-        $properties = $thisClass->getProperties();
-        $inheritedProperties = $parentClass->getProperties();
-        $properties = array_diff($properties, $inheritedProperties);
+        if (!is_int($this::ResponseCode)) {
+            throw new RuntimeException('Response code is not set for ' . $this::class);
+        }
 
-        $this->fillResponse($properties);
+        $this->fillResponse(ResponseParser::getResponseProperties($this::class));
 
-        $this->setHeader(CommonHeader::CONTENT_TYPE->value, $this->getContentType()->value);
+        $this->setHeader(CommonHeader::CONTENT_TYPE->value, $this::ContentType->value);
+        $this->setCode($this::ResponseCode);
         $this->send();
     }
 
@@ -34,6 +37,4 @@ abstract class AbstractResponse extends Response
      * @param ReflectionProperty[] $properties
      */
     abstract public function fillResponse(array $properties): void;
-
-    abstract public function getContentType(): ContentType;
 }

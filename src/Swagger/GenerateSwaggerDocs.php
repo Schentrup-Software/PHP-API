@@ -4,16 +4,20 @@ namespace PhpApi\Swagger;
 
 use AutoRoute\AutoRoute;
 use InvalidArgumentException;
+use PhpApi\Enum\ContentType as EnumContentType;
 use PhpApi\Enum\InputParamType;
 use PhpApi\Model\Request\AbstractRequest;
 use PhpApi\Model\Request\RequestParser;
 use PhpApi\Model\Request\RequestProperty;
+use PhpApi\Model\Response\AbstractResponse;
+use PhpApi\Model\Response\ResponseParser;
 use PhpApi\Model\RouterOptions;
 use PhpApi\Swagger\Model\ContentType;
 use PhpApi\Swagger\Model\Parameter;
 use PhpApi\Swagger\Model\RequestBody;
 use PhpApi\Swagger\Model\RequestObjectParseResults;
 use PhpApi\Swagger\Model\Response;
+use PhpApi\Swagger\Model\ResponseContent;
 use PhpApi\Swagger\Model\Schema;
 use PhpApi\Utility\Arrays;
 use ReflectionClass;
@@ -209,14 +213,57 @@ class GenerateSwaggerDocs
      */
     private function parseReturnType(ReflectionNamedType|ReflectionUnionType $reflectionType): array
     {
+        /** @var array<int, Response> $parsedTypeData */
+        $parsedTypeData = [];
+
         if ($reflectionType instanceof ReflectionUnionType) {
-            $parsedTypeData = [];
             foreach ($reflectionType->getTypes() as $type) {
                 if ($type instanceof ReflectionNamedType) {
+                    $parsedTypes = $this->parseReturnType($type);
+                    foreach ($parsedTypes as $responseCode => $parsedType) {
+                        if (!isset($parsedTypeData[$responseCode])) {
+                            $parsedTypeData[$responseCode] = $parsedType;
+                        } else {
+                            $parsedTypeData[$responseCode] = new Response(
+                                description: $parsedType->description,
+                                content: array_merge(
+                                    $parsedTypeData[$responseCode]->content,
+                                    $parsedType->content
+                                )
+                            );
+                        }
+                    }
                 }
             }
         } else {
+            $relectionClass = new ReflectionClass($reflectionType->getName());
+
+            if (!$relectionClass->isSubclassOf(AbstractResponse::class)) {
+                throw new InvalidArgumentException("Return type must be a subclass of AbstractResponse");
+            }
+
+            $responseCode = $relectionClass->getConstant('ResponseCode');
+            if (!is_int($responseCode)) {
+                throw new InvalidArgumentException("Response code must be an integer");
+            }
+
+            /** @var EnumContentType $contentType */
+            $contentType = $relectionClass->getConstant('ContentType');
+            if (!in_array($contentType, EnumContentType::cases(), true)) {
+                throw new InvalidArgumentException("Content type must be an instance of ContentType");
+            }
+
+            $parsedTypeData[$responseCode] = new Response(
+                description: $relectionClass->getConstant('description'),
+                content: [
+                    $contentType->value => new ResponseContent(
+                        $this->getSchemaFromClass($reflectionType)
+                    ),
+                ]
+            );
         }
+
+        return $parsedTypeData;
     }
 
     private function getSchemaFromClass(ReflectionNamedType $reflectionType): Schema
@@ -229,14 +276,21 @@ class GenerateSwaggerDocs
 
         $className = $reflectionType->getName();
         $reflectionClass = new ReflectionClass($className);
+
+        if ($reflectionClass->isSubclassOf(AbstractResponse::class)) {
+            $reflectionProperties = ResponseParser::getResponseProperties($className);
+        } else {
+            $reflectionProperties = $reflectionClass->getProperties();
+        }
+
         $properties = [];
-        foreach ($reflectionClass->getProperties() as $property) {
-            $propertyType = $property->getType();
+        foreach ($reflectionProperties as $reflectionProperty) {
+            $propertyType = $reflectionProperty->getType();
             if (!($propertyType instanceof ReflectionNamedType)) {
                 throw new InvalidArgumentException("Property type must be a named type. Cannot be null or union type");
             }
 
-            $properties[$property->getName()] = $this->getSchemaFromClass($propertyType);
+            $properties[$reflectionProperty->getName()] = $this->getSchemaFromClass($propertyType);
         }
 
         return new Schema(

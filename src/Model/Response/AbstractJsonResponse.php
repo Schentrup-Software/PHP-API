@@ -7,6 +7,9 @@ use ReflectionProperty;
 
 class AbstractJsonResponse extends AbstractResponse
 {
+    /** @var ContentType ContentType */
+    public const ContentType = ContentType::JSON;
+
     /**
      * @param ReflectionProperty[] $propertyValues
      */
@@ -18,10 +21,5 @@ class AbstractJsonResponse extends AbstractResponse
         }
 
         $this->setContent(json_encode($content));
-    }
-
-    public function getContentType(): ContentType
-    {
-        return ContentType::JSON;
     }
 }
