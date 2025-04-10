@@ -17,6 +17,12 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.1'
+        extensions: ast
+
     - name: Validate composer.json and composer.lock
       run: composer validate --strict
 
@@ -32,14 +38,11 @@ jobs:
     - name: Install dependencies
       run: composer install --prefer-dist --no-progress
 
-    # Add a test script to composer.json, for instance: "test": "vendor/bin/phpunit"
-    # Docs: https://getcomposer.org/doc/articles/scripts.md
-
     - name: Run static analysis
-      run: composer run analyse
+      run: PHAN_DISABLE_XDEBUG_WARN=1 PHAN_ALLOW_XDEBUG=1 vendor/bin/phan
 
     - name: Run linter
-      run: composer run lint
+      run: PHP_CS_FIXER_IGNORE_ENV=1 vendor/bin/php-cs-fixer fix --dry-run src
 
     - name: Run test suite
       run: composer run test
