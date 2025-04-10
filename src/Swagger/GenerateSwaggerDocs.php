@@ -6,15 +6,19 @@ use AutoRoute\AutoRoute;
 use InvalidArgumentException;
 use PhpApi\Enum\InputParamType;
 use PhpApi\Model\Request\AbstractRequest;
+use PhpApi\Model\Request\RequestParser;
 use PhpApi\Model\Request\RequestProperty;
 use PhpApi\Model\RouterOptions;
 use PhpApi\Swagger\Model\ContentType;
 use PhpApi\Swagger\Model\Parameter;
 use PhpApi\Swagger\Model\RequestBody;
+use PhpApi\Swagger\Model\RequestObjectParseResults;
+use PhpApi\Swagger\Model\Response;
 use PhpApi\Swagger\Model\Schema;
 use PhpApi\Utility\Arrays;
 use ReflectionClass;
 use ReflectionException;
+use ReflectionIntersectionType;
 use ReflectionNamedType;
 use ReflectionUnionType;
 
@@ -52,6 +56,7 @@ class GenerateSwaggerDocs
                 $pathVariables = [];
                 preg_match_all('/\{([^}]+)\}/', $path, $pathVariables);
 
+                /** @var Parameter[] $parameters */
                 $parameters = [];
                 foreach (($pathVariables[1] ?? []) as $typeVariable) {
                     $parsedTypeVariable = explode(':', $typeVariable);
@@ -59,21 +64,25 @@ class GenerateSwaggerDocs
                         name: $parsedTypeVariable[1],
                         in: 'path',
                         required: true,
-                        schema: [
-                            new Schema(
-                                type: $parsedTypeVariable[0],
-                            ),
-                        ]
+                        schema: new Schema(
+                            type: $parsedTypeVariable[0],
+                        ),
                     );
                 }
 
                 $requestObject = Arrays::getFirstElement($reflectionMethod->getParameters())?->getType();
                 if ($requestObject instanceof ReflectionNamedType || $requestObject instanceof ReflectionUnionType) {
-                    $requestBody = $this->getRequestFromClass($requestObject, $method);
-                } else {
-                    $requestBody = null;
+                    $requestBody = $this->parseRequestType($requestObject, $method, $parameters);
+                } elseif ($requestObject instanceof ReflectionIntersectionType) {
+                    throw new InvalidArgumentException("Intersection types are not supported");
                 }
 
+                $returnType = $reflectionMethod->getReturnType();
+                if ($returnType instanceof ReflectionNamedType || $returnType instanceof ReflectionUnionType) {
+                    $responses = $this->parseReturnType($returnType);
+                } elseif ($returnType instanceof ReflectionIntersectionType) {
+                    throw new InvalidArgumentException("Intersection types are not supported");
+                }
 
                 echo $method . ' ' . $path . '<br>';
                 echo 'Class: ' . $class . '<br>';
@@ -83,55 +92,73 @@ class GenerateSwaggerDocs
         return $swagger;
     }
 
-    private function parseReturnType(ReflectionNamedType|ReflectionUnionType $reflectionType, string $method): RequestBody
+    /**
+     * @param array &$parameters
+     */
+    private function parseRequestType(ReflectionNamedType|ReflectionUnionType $reflectionType, string $method, array &$parameters): RequestBody
     {
         if ($reflectionType instanceof ReflectionUnionType) {
-            $types = [];
+            $parsedTypeData = [];
             foreach ($reflectionType->getTypes() as $type) {
                 if ($type instanceof ReflectionNamedType) {
-                    $types[] = $this->getSchemaFromClass($type, $method);
+                    $parsedType = $this->parseNamedRequestType($type, $method);
+                    $parsedTypeData[] = $parsedType;
+
+                    foreach ($parsedType->queryParams as $name => $schema) {
+                        $parameters[] = new Parameter(
+                            name: $name,
+                            in: 'query',
+                            required: true,
+                            schema: $schema,
+                        );
+                    }
                 }
             }
+
+            $groupedData = Arrays::groupBy($parsedTypeData, fn (RequestObjectParseResults $type) => $type->inputContentType?->toContentType());
+            $content = array_map(
+                fn (RequestObjectParseResults $type) => new ContentType(
+                    schema: new Schema(
+                        type: 'object',
+                        properties: $type->inputContent,
+                    )
+                ),
+                $groupedData
+            );
+
             return new RequestBody(
                 required: true,
-                content: [
-                    'application/json' => new ContentType(
-                        schema: new Schema(
-                            oneOf: $types,
-                        )
-                    ),
-                ]
+                content: $content
             );
         } else {
+            $requestTypeData = $this->parseNamedRequestType($reflectionType, $method);
+            $content = !empty($requestTypeData->inputContentType) ? [
+                $requestTypeData->inputContentType?->toContentType() => new ContentType(
+                    schema: new Schema(
+                        type: 'object',
+                        properties: $requestTypeData->inputContent,
+                    )
+                ),
+            ] : [];
+
             return new RequestBody(
                 required: true,
-                content: [
-                    'application/json' => new ContentType(
-                        schema: $this->getSchemaFromClass(
-                            $reflectionType,
-                            $method
-                        )
-                    ),
-                ]
+                content: $content,
             );
         }
     }
 
-    private function parseNamedReturnType(ReflectionNamedType $reflectionType, string $method)
+    private function parseNamedRequestType(ReflectionNamedType $reflectionType, string $method): RequestObjectParseResults
     {
-        $bodyContent = [];
         $queryContent = [];
+        $inputContentType = null;
+        $inputContent = [];
 
         $className = $reflectionType->getName();
         $reflectionClass = new ReflectionClass($className);
 
-        if (!$reflectionClass->isSubclassOf(AbstractRequest::class)) {
-            throw new InvalidArgumentException("Controller argument of type $className is not a subclass of " . AbstractRequest::class);
-        }
-
         $className = $reflectionClass->getName();
-        /** @var RequestProperty[] $paramTypes */
-        $paramTypes = $className::getParamTypes($method);
+        $paramTypes = RequestParser::getParamTypes($className, $method);
 
         foreach ($paramTypes as $paramType) {
             $propertyType = $reflectionClass->getProperty($paramType->propertyName)->getType();
@@ -140,24 +167,55 @@ class GenerateSwaggerDocs
                 throw new InvalidArgumentException("Property type must be a named type. Cannot be null or union type");
             }
 
-            // We need to throw some type of error if you mix json and input
-            // We also need to get if its json on input up to the parseReturnType function
             if ($paramType->type === InputParamType::Query) {
                 $queryContent[$paramType->name] = $this->getSchemaFromClass(
                     $propertyType,
                     $method
                 );
             } elseif ($paramType->type === InputParamType::Json) {
-                $bodyContent[$paramType->name] = $this->getSchemaFromClass(
+                if ($inputContentType === null) {
+                    $inputContentType = InputParamType::Json;
+                } else {
+                    throw new InvalidArgumentException("Cannot have both json and input params in the same request");
+                }
+
+                $inputContent[$paramType->name] = $this->getSchemaFromClass(
                     $propertyType,
                     $method
                 );
             } elseif ($paramType->type === InputParamType::Input) {
-                $bodyContent[$paramType->name] = $this->getSchemaFromClass(
+                if ($inputContentType === null) {
+                    $inputContentType = InputParamType::Input;
+                } else {
+                    throw new InvalidArgumentException("Cannot have both json and input params in the same request");
+                }
+
+                $inputContent[$paramType->name] = $this->getSchemaFromClass(
                     $propertyType,
                     $method
                 );
             }
+        }
+
+        return new RequestObjectParseResults(
+            queryParams: $queryContent,
+            inputContentType: $inputContentType,
+            inputContent: $inputContent,
+        );
+    }
+
+    /**
+     * @return array<int, Response>
+     */
+    private function parseReturnType(ReflectionNamedType|ReflectionUnionType $reflectionType): array
+    {
+        if ($reflectionType instanceof ReflectionUnionType) {
+            $parsedTypeData = [];
+            foreach ($reflectionType->getTypes() as $type) {
+                if ($type instanceof ReflectionNamedType) {
+                }
+            }
+        } else {
         }
     }
 
@@ -167,6 +225,18 @@ class GenerateSwaggerDocs
             return new Schema(
                 type: $reflectionType->getName(),
             );
+        }
+
+        $className = $reflectionType->getName();
+        $reflectionClass = new ReflectionClass($className);
+        $properties = [];
+        foreach ($reflectionClass->getProperties() as $property) {
+            $propertyType = $property->getType();
+            if (!($propertyType instanceof ReflectionNamedType)) {
+                throw new InvalidArgumentException("Property type must be a named type. Cannot be null or union type");
+            }
+
+            $properties[$property->getName()] = $this->getSchemaFromClass($propertyType);
         }
 
         return new Schema(

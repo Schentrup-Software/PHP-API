@@ -2,6 +2,7 @@
 
 namespace PhpApi\Enum;
 
+use InvalidArgumentException;
 use PhpApi\Model\Request\Attribute\InputParam;
 use PhpApi\Model\Request\Attribute\JsonRequestParam;
 use PhpApi\Model\Request\Attribute\QueryParam;
@@ -23,5 +24,14 @@ enum InputParamType: int
         }
 
         return null;
+    }
+
+    public function toContentType(): string
+    {
+        return match ($this) {
+            self::Input => 'application/x-www-form-urlencoded',
+            self::Json => 'application/json',
+            default => throw new InvalidArgumentException('Invalid content type'),
+        };
     }
 }
