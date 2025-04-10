@@ -29,5 +29,5 @@
             ]
         }
     },
-    "postCreateCommand": "sudo .devcontainer/post-create.sh"
+    "postCreateCommand": "sudo sh - .devcontainer/post-create.sh"
 }
