@@ -8,9 +8,7 @@ class Path
      *
      * @param string[] $tags
      * @param Parameter[] $parameters
-     * @param RequestBody $requestBody
-     * @param array<int, Response> $responses
-     * @return void
+     * @param (null|array<int, Response>) $responses
      */
     public function __construct(
         public array $tags,

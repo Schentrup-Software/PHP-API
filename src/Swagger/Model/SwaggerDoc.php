@@ -6,8 +6,8 @@ class SwaggerDoc
 {
     /**
      * @param string $openapi OpenAPI version
-     * @param Servers[] $servers
-     * @param Tags[] $tags
+     * @param (null|Servers[]) $servers
+     * @param (null|Tags[]) $tags
      * @param array<string, array<string, Path>> $paths $path[path][httpMethod] = Path
      */
     public function __construct(

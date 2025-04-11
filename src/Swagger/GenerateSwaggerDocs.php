@@ -6,9 +6,7 @@ use AutoRoute\AutoRoute;
 use InvalidArgumentException;
 use PhpApi\Enum\ContentType as EnumContentType;
 use PhpApi\Enum\InputParamType;
-use PhpApi\Model\Request\AbstractRequest;
 use PhpApi\Model\Request\RequestParser;
-use PhpApi\Model\Request\RequestProperty;
 use PhpApi\Model\Response\AbstractResponse;
 use PhpApi\Model\Response\ResponseParser;
 use PhpApi\Model\RouterOptions;
@@ -68,7 +66,12 @@ class GenerateSwaggerDocs
         };
         $swaggerDocArray = $withoutNull($swaggerDocArray);
 
-        return json_encode($swaggerDocArray);
+        $jsonResult = json_encode($swaggerDocArray);
+        if ($jsonResult === false) {
+            throw new InvalidArgumentException('Failed to encode JSON: ' . json_last_error_msg());
+        }
+
+        return $jsonResult;
     }
 
     /**
@@ -183,6 +186,7 @@ class GenerateSwaggerDocs
                 }
             }
 
+            /** @var array<string, RequestObjectParseResults[]> $groupedData */
             $groupedData = Arrays::groupBy($parsedTypeData, fn (RequestObjectParseResults $type) => $type->inputContentType?->toContentType());
             $content = array_map(
                 fn (RequestObjectParseResults $type) => new ContentType(
@@ -236,10 +240,7 @@ class GenerateSwaggerDocs
             }
 
             if ($paramType->type === InputParamType::Query) {
-                $queryContent[$paramType->name] = $this->getSchemaFromClass(
-                    $propertyType,
-                    $method
-                );
+                $queryContent[$paramType->name] = $this->getSchemaFromClass($propertyType);
             } elseif ($paramType->type === InputParamType::Json) {
                 if ($inputContentType === null) {
                     $inputContentType = InputParamType::Json;
@@ -247,10 +248,7 @@ class GenerateSwaggerDocs
                     throw new InvalidArgumentException("Cannot have both json and input params in the same request");
                 }
 
-                $inputContent[$paramType->name] = $this->getSchemaFromClass(
-                    $propertyType,
-                    $method
-                );
+                $inputContent[$paramType->name] = $this->getSchemaFromClass($propertyType);
             } elseif ($paramType->type === InputParamType::Input) {
                 if ($inputContentType === null) {
                     $inputContentType = InputParamType::Input;
@@ -258,10 +256,7 @@ class GenerateSwaggerDocs
                     throw new InvalidArgumentException("Cannot have both json and input params in the same request");
                 }
 
-                $inputContent[$paramType->name] = $this->getSchemaFromClass(
-                    $propertyType,
-                    $method
-                );
+                $inputContent[$paramType->name] = $this->getSchemaFromClass($propertyType);
             }
         }
 

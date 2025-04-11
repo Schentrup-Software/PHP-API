@@ -4,7 +4,6 @@ namespace PhpApi\Model\Response;
 
 use PhpApi\Enum\CommonHeader;
 use PhpApi\Enum\ContentType;
-use ReflectionClass;
 use ReflectionProperty;
 use RuntimeException;
 use Sapien\Response;

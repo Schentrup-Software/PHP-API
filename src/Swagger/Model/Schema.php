@@ -5,9 +5,8 @@ namespace PhpApi\Swagger\Model;
 class Schema
 {
     /**
-     * @param string $type
-     * @param (array<string, Schema>|null) $properties
      * @param (string[]|null) $required
+     * @param (array<string, Schema>|null) $properties
      * @param (array<Schema>|null) $oneOf
      */
     public function __construct(
