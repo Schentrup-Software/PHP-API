@@ -136,7 +136,7 @@ class GenerateSwaggerDocs
             }
         }
         return new SwaggerDoc(
-            openapi: '3.0.4',
+            openapi: '3.1.0',
             info: new Info(
                 title: 'API Documentation',
                 description: 'API Documentation',

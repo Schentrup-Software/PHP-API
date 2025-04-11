@@ -247,7 +247,7 @@ class Router
         $response = new Response();
         $response->setCode(200);
         $response->setHeader('Content-Type', 'text/html');
-        $response->setContent(file_get_contents(__DIR__ . '/../swagger/index.html'));
+        $response->setContent(file_get_contents(__DIR__ . '/Swagger/index.html'));
         $response->send();
     }
 }
