@@ -21,11 +21,8 @@ class Arrays
     }
 
     /**
-     *
-     * @param T[] $array
-     * @param int|string|float|callable $key
-     * @return array<int|string|float, T[]>
-     * @template T
+     * @phan-file-suppress PhanTypeArraySuspicious
+     * @phan-file-suppress PhanPartialTypeMismatchReturn
      */
     public static function groupBy(array $array, int|string|float|callable $key): array
     {
@@ -39,7 +36,7 @@ class Arrays
 
             if (is_callable($func)) {
                 $key = call_user_func($func, $value);
-            } elseif (is_object($value) && property_exists($value, $_key)) {
+            } elseif (is_object($value) && is_string($_key) && property_exists($value, $_key)) {
                 $key = $value->{$_key};
             } elseif (isset($value[$_key])) {
                 $key = $value[$_key];

@@ -39,19 +39,24 @@ class Router
     /** @var array<int, callable> $errorHandlers */
     private array $errorHandlers = [];
 
+    /** @var callable $controllerFactory */
+    private mixed $controllerFactory;
+
     /**
      * @param callable|null $controllerFactory
      */
     public function __construct(
         private RouterOptions $routerOptions,
-        private mixed $controllerFactory = null,
+        mixed $controllerFactory = null,
     ) {
-        if ($this->controllerFactory === null) {
+        if ($controllerFactory === null) {
             $this->controllerFactory = function (string $className) {
                 return new $className();
             };
-        } elseif (!is_callable($this->controllerFactory)) {
-            throw new InvalidArgumentException('Controller factory must be callable');
+        } elseif (is_callable($controllerFactory)) {
+            $this->controllerFactory = $controllerFactory;
+        } else {
+            throw new InvalidArgumentException('Controller factory must be a callable or null');
         }
 
         $this->autoRoute = new AutoRoute(
@@ -71,14 +76,16 @@ class Router
             $request = new Request();
         }
 
-        if (isset(self::StaticRoutes[$request->method->name][$request->url->path])) {
-            $method = self::StaticRoutes[$request->method->name][$request->url->path];
+        $method = $request->method->name ?? 'GET';
+        $path = $request->url->path ?? '';
+
+        if (isset(self::StaticRoutes[$method][$path])) {
+            $method = self::StaticRoutes[$method][$path];
             $this->$method();
             return;
         }
 
-        $route = $this->autoRoute->getRouter()
-            ->route($request->method->name ?? 'GET', $request->url->path ?? '');
+        $route = $this->autoRoute->getRouter()->route($method, $path);
 
         if ($route->error != null) {
             $routerException = RouterExceptions::fromRouterException($route->error);
