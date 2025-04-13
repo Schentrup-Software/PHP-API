@@ -14,15 +14,14 @@ class ResponseParser
     public static function getResponseProperties(string $class): array
     {
         $thisClass = new ReflectionClass($class);
-        $parentClass = $thisClass->getParentClass();
 
-        if ($parentClass === false) {
-            throw new RuntimeException('No parent class found for ' . $thisClass->getName());
+        if (!$thisClass->isSubclassOf(AbstractResponse::class)) {
+            throw new RuntimeException('Class ' . $class . ' is not a subclass of AbstractResponse');
         }
 
-        $properties = $thisClass->getProperties();
-        $inheritedProperties = $parentClass->getProperties();
-        $properties = array_diff($properties, $inheritedProperties);
+        $baseClass = new ReflectionClass(AbstractResponse::class);
+        $inheritedProperties = $baseClass->getProperties();
+        $properties = array_diff($thisClass->getProperties(), $inheritedProperties);
 
         return $properties;
     }

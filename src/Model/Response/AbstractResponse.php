@@ -4,7 +4,6 @@ namespace PhpApi\Model\Response;
 
 use PhpApi\Enum\CommonHeader;
 use PhpApi\Enum\ContentType;
-use ReflectionClass;
 use ReflectionProperty;
 use RuntimeException;
 use Sapien\Response;
@@ -12,9 +11,9 @@ use Sapien\Response;
 abstract class AbstractResponse extends Response
 {
     /** @var ContentType ContentType */
-    public const ContentType = self::ContentType;
+    public const ContentType = null;
     /** @var int ResponseCode */
-    public const ResponseCode = self::ResponseCode;
+    public const ResponseCode = null;
 
     public function sendResponse(): void
     {

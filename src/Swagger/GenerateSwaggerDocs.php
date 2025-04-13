@@ -149,12 +149,7 @@ class GenerateSwaggerDocs
                 url: 'https://example.com',
                 description: 'External Docs',
             ),
-            servers: [
-                new Servers(
-                    url: 'https://localhost:8080',
-                    description: 'Server',
-                ),
-            ],
+            servers: [],
             tags: [],
             paths: $paths,
         );
