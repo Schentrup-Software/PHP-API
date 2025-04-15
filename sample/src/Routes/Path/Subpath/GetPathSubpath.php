@@ -29,8 +29,6 @@ class GetResponse extends AbstractJsonResponse
 {
     public const ResponseCode = 200;
 
-    // TODO: This is kinda weird that we have the constructor version of properties for responses
-    // But that does not work for requests. We need to work that out.
     public function __construct(
         public int $pathVar,
         public ?int $someVar = null,
