@@ -295,7 +295,8 @@ class GenerateSwaggerDocs
         $paramTypes = RequestParser::getParamTypes($className, $method);
 
         foreach ($paramTypes as $paramType) {
-            $propertyType = $reflectionClass->getProperty($paramType->propertyName)->getType();
+            $property = $reflectionClass->getProperty($paramType->propertyName);
+            $propertyType = $property->getType();
 
             if (!($propertyType instanceof ReflectionNamedType)) {
                 throw new InvalidArgumentException("Property type must be a named type. Cannot be null or union type");
@@ -306,7 +307,7 @@ class GenerateSwaggerDocs
                     schema: $this->getSchemaFromClass($propertyType),
                     allowsNull: $propertyType->allowsNull()
                         || $paramType->hasDefaultValue,
-                    description: '' // TODO: Add description attribute to the property
+                    description: $this->getDescription($property) ?? '',
                 );
             } elseif ($paramType->type === InputParamType::Json) {
                 if ($inputContentType === null) {

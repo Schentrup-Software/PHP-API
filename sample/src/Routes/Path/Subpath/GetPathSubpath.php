@@ -25,7 +25,9 @@ class GetPathSubpath
 
 class GetRequest extends AbstractRequest
 {
+    #[SwaggerDescription('someVar description')]
     public ?int $someVar;
+
     public string $someMessage = 'Has a default value';
 }
 
