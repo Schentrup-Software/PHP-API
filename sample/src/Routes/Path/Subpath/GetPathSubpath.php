@@ -4,7 +4,11 @@ namespace PhpApiSample\Routes\Path\Subpath;
 
 use PhpApi\Model\Request\AbstractRequest;
 use PhpApi\Model\Response\AbstractJsonResponse;
+use PhpApi\Swagger\Attribute\SwaggerDescription;
+use PhpApi\Swagger\Attribute\SwaggerSummary;
 
+#[SwaggerSummary('Get a subpath summary')]
+#[SwaggerDescription('Get a subpath description')]
 class GetPathSubpath
 {
     public function execute(GetRequest $r, int $pathVar2): GetResponse

@@ -12,6 +12,8 @@ use PhpApi\Model\Response\AbstractResponse;
 use PhpApi\Model\Response\ResponseParser;
 use PhpApi\Model\RouterOptions;
 use PhpApi\Model\SwaggerOptions;
+use PhpApi\Swagger\Attribute\SwaggerDescription;
+use PhpApi\Swagger\Attribute\SwaggerSummary;
 use PhpApi\Swagger\Model\Contact;
 use PhpApi\Swagger\Model\ContentType;
 use PhpApi\Swagger\Model\ExternalDocs;
@@ -30,7 +32,9 @@ use PhpApi\Utility\Arrays;
 use ReflectionClass;
 use ReflectionException;
 use ReflectionIntersectionType;
+use ReflectionMethod;
 use ReflectionNamedType;
+use ReflectionProperty;
 use ReflectionUnionType;
 
 class GenerateSwaggerDocs
@@ -127,15 +131,19 @@ class GenerateSwaggerDocs
                     throw new InvalidArgumentException("Intersection types are not supported");
                 }
 
-                // TODO: This should be an attribute
-                $description = $reflectionMethod->getDocComment();
-                if ($description == false) {
-                    $description = $reflectionMethod->getName();
+                $summary = $this->getSummary($reflectionClass);
+                if (empty($summary)) {
+                    $summary = $this->getSummary($reflectionMethod) ?? $reflectionClass->getName();
+                }
+
+                $description = $this->getDescription($reflectionClass);
+                if (empty($description)) {
+                    $description = $this->getDescription($reflectionMethod) ?? $reflectionClass->getName();
                 }
 
                 $paths[$cleanPath][strtolower($method)] = new Path(
                     tags: [],
-                    summary: $description, //TODO: Add summary attribute to the method
+                    summary: $summary,
                     description: $description,
                     operationId: $method . '_' . $reflectionClass->getName(),
                     parameters: $parameters,
@@ -177,6 +185,8 @@ class GenerateSwaggerDocs
     {
         if ($reflectionType instanceof ReflectionUnionType) {
             $parsedTypeData = [];
+            $description = null;
+
             foreach ($reflectionType->getTypes() as $type) {
                 if ($type instanceof ReflectionNamedType) {
                     $parsedType = $this->parseNamedRequestType($type, $method);
@@ -186,6 +196,8 @@ class GenerateSwaggerDocs
                     if (!$reflectionClass->isSubclassOf(AbstractResponse::class)) {
                         throw new InvalidArgumentException("Return type must be a subclass of AbstractResponse");
                     }
+
+                    $description = $this->getDescription($reflectionClass);
 
                     foreach ($parsedType->queryParams as $name => $propertyData) {
                         $parameters[] = new Parameter(
@@ -226,7 +238,8 @@ class GenerateSwaggerDocs
 
             return new RequestBody(
                 required: !$reflectionType->allowsNull(),
-                content: $content
+                content: $content,
+                description: $description,
             );
         } else {
             $reflectionClass = new ReflectionClass($reflectionType->getName());
@@ -261,10 +274,10 @@ class GenerateSwaggerDocs
                 return null;
             }
 
-            // TODO: Request object descriptions
             return new RequestBody(
                 required: !$reflectionType->allowsNull(),
                 content: $content,
+                description: $this->getDescription($reflectionClass) ?? $reflectionClass->getName(),
             );
         }
     }
@@ -429,5 +442,29 @@ class GenerateSwaggerDocs
             'bool' => 'boolean',
             default => throw new InvalidArgumentException("Unsupported type: " . $type),
         };
+    }
+
+    private function getDescription(ReflectionClass|ReflectionProperty|ReflectionMethod $item): ?string
+    {
+        $attributes = $item->getAttributes();
+        foreach ($attributes as $attribute) {
+            if ($attribute->getName() === SwaggerDescription::class) {
+                $swaggerDescription = $attribute->newInstance();
+                return $swaggerDescription->description;
+            }
+        }
+        return null;
+    }
+
+    private function getSummary(ReflectionClass|ReflectionMethod $item): ?string
+    {
+        $attributes = $item->getAttributes();
+        foreach ($attributes as $attribute) {
+            if ($attribute->getName() === SwaggerSummary::class) {
+                $swaggerSummary = $attribute->newInstance();
+                return $swaggerSummary->summary;
+            }
+        }
+        return null;
     }
 }
