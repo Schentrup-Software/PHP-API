@@ -10,9 +10,9 @@ use Sapien\Response;
 
 abstract class AbstractResponse extends Response
 {
-    /** @var ContentType ContentType */
+    /** @var ?ContentType ContentType */
     public const ContentType = null;
-    /** @var int ResponseCode */
+    /** @var ?int ResponseCode */
     public const ResponseCode = null;
 
     public function sendResponse(): void
@@ -27,8 +27,12 @@ abstract class AbstractResponse extends Response
 
         $this->fillResponse(ResponseParser::getResponseProperties($this::class));
 
-        $this->setHeader(CommonHeader::CONTENT_TYPE->value, $this::ContentType->value);
-        $this->setCode($this::ResponseCode);
+        $this->setHeader(
+            CommonHeader::CONTENT_TYPE->value,
+            /** @phan-suppress-next-line PhanTypeExpectedObjectPropAccessButGotNull, PhanPossiblyUndeclaredProperty */
+            $this::ContentType->value,
+        );
+        $this->setCode($this::ResponseCode ?? 200);
         $this->send();
     }
 

@@ -2,11 +2,12 @@
 
 namespace PhpApiSample\Routes\Path\Subpath;
 
+use PhpApi\Model\Request\AbstractRequest;
 use PhpApi\Model\Response\AbstractJsonResponse;
 
 class GetPathSubpath
 {
-    public function execute($_, int $pathVar2): GetResponse
+    public function execute(GetRequest $_, int $pathVar2): GetResponse
     {
         $response = new GetResponse(
             message: 'Hello World 2',
@@ -14,6 +15,15 @@ class GetPathSubpath
         );
         $response->setCode(200);
         return $response;
+    }
+}
+
+class GetRequest extends AbstractRequest
+{
+    public function __construct(
+        public ?int $someVar,
+        public ?string $someMessage,
+    ) {
     }
 }
 

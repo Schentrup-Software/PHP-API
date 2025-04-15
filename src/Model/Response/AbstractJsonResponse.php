@@ -8,7 +8,7 @@ use ReflectionProperty;
 class AbstractJsonResponse extends AbstractResponse
 {
     /** @var ContentType ContentType */
-    public const ContentType = ContentType::JSON;
+    public const ContentType = ContentType::Json;
 
     /**
      * @param ReflectionProperty[] $propertyValues

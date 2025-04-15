@@ -14,6 +14,7 @@ class RequestObjectParseResults
         public readonly array $queryParams,
         public readonly ?InputParamType $inputContentType,
         public readonly array $inputContent,
+        public readonly bool $allowsNull,
     ) {
     }
 }

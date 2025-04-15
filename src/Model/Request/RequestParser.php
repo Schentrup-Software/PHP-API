@@ -50,7 +50,7 @@ class RequestParser
             }
 
             if (!isset($inputParamType)) {
-                $inputParamType = in_array($method, HttpMethod::getQueryOnlyMethods())
+                $inputParamType = in_array(strtoupper($method), HttpMethod::getQueryOnlyMethods())
                     ? InputParamType::Query
                     : InputParamType::Json;
             }

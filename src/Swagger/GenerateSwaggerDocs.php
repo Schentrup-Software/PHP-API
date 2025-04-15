@@ -6,13 +6,17 @@ use AutoRoute\AutoRoute;
 use InvalidArgumentException;
 use PhpApi\Enum\ContentType as EnumContentType;
 use PhpApi\Enum\InputParamType;
+use PhpApi\Model\Request\AbstractRequest;
 use PhpApi\Model\Request\RequestParser;
 use PhpApi\Model\Response\AbstractResponse;
 use PhpApi\Model\Response\ResponseParser;
 use PhpApi\Model\RouterOptions;
+use PhpApi\Model\SwaggerOptions;
+use PhpApi\Swagger\Model\Contact;
 use PhpApi\Swagger\Model\ContentType;
 use PhpApi\Swagger\Model\ExternalDocs;
 use PhpApi\Swagger\Model\Info;
+use PhpApi\Swagger\Model\License;
 use PhpApi\Swagger\Model\Parameter;
 use PhpApi\Swagger\Model\Path;
 use PhpApi\Swagger\Model\RequestBody;
@@ -20,7 +24,6 @@ use PhpApi\Swagger\Model\RequestObjectParseResults;
 use PhpApi\Swagger\Model\Response;
 use PhpApi\Swagger\Model\ResponseContent;
 use PhpApi\Swagger\Model\Schema;
-use PhpApi\Swagger\Model\Servers;
 use PhpApi\Swagger\Model\SwaggerDoc;
 use PhpApi\Utility\Arrays;
 use ReflectionClass;
@@ -34,6 +37,7 @@ class GenerateSwaggerDocs
     public function __construct(
         private readonly AutoRoute $autoRoute,
         private readonly RouterOptions $routerOptions,
+        private readonly SwaggerOptions $swaggerOptions,
     ) {
     }
 
@@ -141,18 +145,24 @@ class GenerateSwaggerDocs
         return new SwaggerDoc(
             openapi: '3.1.0',
             info: new Info(
-                title: 'API Documentation',
-                description: 'API Documentation',
-                termsOfService: 'https://example.com/terms',
-                contact: null,
-                license: null,
-                version: '1.0.0',
+                title: $this->swaggerOptions->title,
+                description: $this->swaggerOptions->description,
+                termsOfService: $this->swaggerOptions->termsOfServiceUrl,
+                contact: new Contact(
+                    name: $this->swaggerOptions->contactName,
+                    email: $this->swaggerOptions->contactEmail,
+                    url: $this->swaggerOptions->contactUrl,
+                ),
+                license: new License(
+                    name: $this->swaggerOptions->licenseName,
+                    url: $this->swaggerOptions->licenseUrl,
+                ),
+                version: $this->swaggerOptions->apiVersion,
             ),
             externalDocs: new ExternalDocs(
-                url: 'https://example.com',
-                description: 'External Docs',
+                url: $this->swaggerOptions->externalDocsUrl,
+                description: $this->swaggerOptions->externalDocsDescription,
             ),
-            servers: [],
             tags: [],
             paths: $paths,
         );
@@ -161,7 +171,7 @@ class GenerateSwaggerDocs
     /**
      * @param array &$parameters
      */
-    private function parseRequestType(ReflectionNamedType|ReflectionUnionType $reflectionType, string $method, array &$parameters): RequestBody
+    private function parseRequestType(ReflectionNamedType|ReflectionUnionType $reflectionType, string $method, array &$parameters): ?RequestBody
     {
         if ($reflectionType instanceof ReflectionUnionType) {
             $parsedTypeData = [];
@@ -170,46 +180,85 @@ class GenerateSwaggerDocs
                     $parsedType = $this->parseNamedRequestType($type, $method);
                     $parsedTypeData[] = $parsedType;
 
+                    $reflectionClass = new ReflectionClass($type->getName());
+                    if (!$reflectionClass->isSubclassOf(AbstractResponse::class)) {
+                        throw new InvalidArgumentException("Return type must be a subclass of AbstractResponse");
+                    }
+
                     foreach ($parsedType->queryParams as $name => $schema) {
                         $parameters[] = new Parameter(
                             name: $name,
                             in: 'query',
-                            required: true,
+                            required: !$type->allowsNull(),
                             schema: $schema,
                         );
                     }
+                } else {
+                    throw new InvalidArgumentException("Request type cannot contain intersection types");
                 }
             }
 
             /** @var array<string, RequestObjectParseResults[]> $groupedData */
             $groupedData = Arrays::groupBy($parsedTypeData, fn (RequestObjectParseResults $type) => $type->inputContentType?->toContentType());
             $content = array_map(
-                fn (RequestObjectParseResults $type) => new ContentType(
+                fn ($types) => new ContentType(
                     schema: new Schema(
-                        type: 'object',
-                        properties: $type->inputContent,
+                        oneOf: array_map(
+                            fn (RequestObjectParseResults $type) => new Schema(
+                                type: 'object',
+                                properties: $type->inputContent,
+                            ),
+                            $types
+                        )
                     )
                 ),
                 $groupedData
             );
 
+            if (empty($content)) {
+                return null;
+            }
+
             return new RequestBody(
-                required: true,
+                required: !$reflectionType->allowsNull(),
                 content: $content
             );
         } else {
-            $requestTypeData = $this->parseNamedRequestType($reflectionType, $method);
-            $content = !empty($requestTypeData->inputContentType) ? [
-                $requestTypeData->inputContentType?->toContentType() => new ContentType(
+            $reflectionClass = new ReflectionClass($reflectionType->getName());
+            if (!$reflectionClass->isSubclassOf(AbstractRequest::class)) {
+                throw new InvalidArgumentException("Return type must be a subclass of AbstractRequest");
+            }
+
+            $parsedType = $this->parseNamedRequestType($reflectionType, $method);
+
+            foreach ($parsedType->queryParams as $name => $schema) {
+                $parameters[] = new Parameter(
+                    name: $name,
+                    in: 'query',
+                    // This does not work with nullable properties becuase the schema does not have a
+                    // required property. This data, along with "description" will have to be pulled
+                    // up from the property class. This should probably be done with a wrapper on the
+                    // schema
+                    required: !$reflectionType->allowsNull() && !$parsedType->allowsNull,
+                    schema: $schema,
+                );
+            }
+
+            $content = !empty($parsedType->inputContentType) ? [
+                $parsedType->inputContentType?->toContentType() => new ContentType(
                     schema: new Schema(
                         type: 'object',
-                        properties: $requestTypeData->inputContent,
+                        properties: $parsedType->inputContent,
                     )
                 ),
             ] : [];
 
+            if (empty($content)) {
+                return null;
+            }
+
             return new RequestBody(
-                required: true,
+                required: !$reflectionType->allowsNull(),
                 content: $content,
             );
         }
@@ -259,6 +308,7 @@ class GenerateSwaggerDocs
             queryParams: $queryContent,
             inputContentType: $inputContentType,
             inputContent: $inputContent,
+            allowsNull: $reflectionType->allowsNull(),
         );
     }
 
@@ -338,6 +388,8 @@ class GenerateSwaggerDocs
         }
 
         $properties = [];
+        $required = [];
+
         foreach ($reflectionProperties as $reflectionProperty) {
             $propertyType = $reflectionProperty->getType();
             if (!($propertyType instanceof ReflectionNamedType)) {
@@ -345,11 +397,16 @@ class GenerateSwaggerDocs
             }
 
             $properties[$reflectionProperty->getName()] = $this->getSchemaFromClass($propertyType);
+
+            if (!$propertyType->allowsNull()) {
+                $required[] = $reflectionProperty->getName();
+            }
         }
 
         return new Schema(
             type: 'object',
             properties: $properties,
+            required: $required,
         );
     }
 

@@ -11,6 +11,7 @@ use PhpApi\Interface\IResponseMiddleware;
 use PhpApi\Model\Request\AbstractRequest;
 use PhpApi\Model\Response\AbstractResponse;
 use PhpApi\Model\RouterOptions;
+use PhpApi\Model\SwaggerOptions;
 use PhpApi\Swagger\GenerateSwaggerDocs;
 use PhpApi\Utility\Arrays;
 use ReflectionClass;
@@ -47,6 +48,7 @@ class Router
      */
     public function __construct(
         private RouterOptions $routerOptions,
+        private SwaggerOptions $swaggerOptions = new SwaggerOptions(),
         mixed $controllerFactory = null,
     ) {
         if ($controllerFactory === null) {
@@ -79,7 +81,9 @@ class Router
         $method = $request->method->name ?? 'GET';
         $path = $request->url->path ?? '';
 
-        if (isset(self::StaticRoutes[$method][$path])) {
+        if ($this->swaggerOptions->enabled
+            && isset(self::StaticRoutes[$method][$path])
+        ) {
             $method = self::StaticRoutes[$method][$path];
             $this->$method();
             return;
@@ -245,6 +249,7 @@ class Router
         $response->setContent((new GenerateSwaggerDocs(
             $this->autoRoute,
             $this->routerOptions,
+            $this->swaggerOptions,
         ))->generate());
         $response->send();
     }
