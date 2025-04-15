@@ -21,7 +21,7 @@ class GetPathSubpath
 
 class GetRequest extends AbstractRequest
 {
-    public ?int $someVar; // TODO: This does not work becuase property is not intialized
+    public ?int $someVar;
     public string $someMessage = 'Has a default value';
 }
 

@@ -19,17 +19,17 @@ abstract class AbstractRequest
         foreach ($paramTypes as $paramType) {
             if ($paramType->type === InputParamType::Query) {
                 $queryParamValue = $this->request->query[$paramType->name] ?? null;
-                if (isset($queryParamValue)) {
+                if (isset($queryParamValue) || !isset($this->{$paramType->propertyName})) {
                     $this->{$paramType->propertyName} = $queryParamValue;
                 }
             } elseif ($paramType->type === InputParamType::Json) {
                 $jsonParamValue = $this->request->json[$paramType->name] ?? null;
-                if (isset($jsonParamValue)) {
+                if (isset($jsonParamValue) || !isset($this->{$paramType->propertyName})) {
                     $this->{$paramType->propertyName} = $jsonParamValue;
                 }
             } elseif ($paramType->type === InputParamType::Input) {
                 $inputParamValue = $this->request->input[$paramType->name] ?? null;
-                if (isset($inputParamValue)) {
+                if (isset($inputParamValue) || !isset($this->{$paramType->propertyName})) {
                     $this->{$paramType->propertyName} = $inputParamValue;
                 }
             }
