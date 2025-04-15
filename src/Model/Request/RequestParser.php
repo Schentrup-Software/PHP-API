@@ -35,6 +35,8 @@ class RequestParser
             }
 
             $attributes = $property->getAttributes();
+            $name = null;
+
             foreach ($attributes as $attribute) {
                 $attributeInstance = $attribute->newInstance();
                 $inputParamType = InputParamType::fromClassInstance($attributeInstance);
@@ -59,6 +61,7 @@ class RequestParser
                 name: $name,
                 propertyName: $property->getName(),
                 type: $inputParamType,
+                hasDefaultValue: $property->hasDefaultValue(),
             );
         }
 

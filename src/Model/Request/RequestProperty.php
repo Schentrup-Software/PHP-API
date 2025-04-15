@@ -9,7 +9,8 @@ class RequestProperty
     public function __construct(
         public readonly string $name,
         public readonly string $propertyName,
-        public readonly InputParamType $type
+        public readonly InputParamType $type,
+        public readonly bool $hasDefaultValue,
     ) {
     }
 }

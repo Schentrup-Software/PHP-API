@@ -21,6 +21,7 @@ use PhpApi\Swagger\Model\Parameter;
 use PhpApi\Swagger\Model\Path;
 use PhpApi\Swagger\Model\RequestBody;
 use PhpApi\Swagger\Model\RequestObjectParseResults;
+use PhpApi\Swagger\Model\RequestObjectQueryParam;
 use PhpApi\Swagger\Model\Response;
 use PhpApi\Swagger\Model\ResponseContent;
 use PhpApi\Swagger\Model\Schema;
@@ -126,6 +127,7 @@ class GenerateSwaggerDocs
                     throw new InvalidArgumentException("Intersection types are not supported");
                 }
 
+                // TODO: This should be an attribute
                 $description = $reflectionMethod->getDocComment();
                 if ($description == false) {
                     $description = $reflectionMethod->getName();
@@ -133,7 +135,7 @@ class GenerateSwaggerDocs
 
                 $paths[$cleanPath][strtolower($method)] = new Path(
                     tags: [],
-                    summary: $description,
+                    summary: $description, //TODO: Add summary attribute to the method
                     description: $description,
                     operationId: $method . '_' . $reflectionClass->getName(),
                     parameters: $parameters,
@@ -163,7 +165,7 @@ class GenerateSwaggerDocs
                 url: $this->swaggerOptions->externalDocsUrl,
                 description: $this->swaggerOptions->externalDocsDescription,
             ),
-            tags: [],
+            tags: [], // TODO: tags for endpoints
             paths: $paths,
         );
     }
@@ -185,12 +187,15 @@ class GenerateSwaggerDocs
                         throw new InvalidArgumentException("Return type must be a subclass of AbstractResponse");
                     }
 
-                    foreach ($parsedType->queryParams as $name => $schema) {
+                    foreach ($parsedType->queryParams as $name => $propertyData) {
                         $parameters[] = new Parameter(
                             name: $name,
                             in: 'query',
-                            required: !$type->allowsNull(),
-                            schema: $schema,
+                            required: !$reflectionType->allowsNull()
+                                && !$parsedType->allowsNull
+                                && !$propertyData->allowsNull,
+                            schema: $propertyData->schema,
+                            description: $propertyData->description,
                         );
                     }
                 } else {
@@ -231,16 +236,15 @@ class GenerateSwaggerDocs
 
             $parsedType = $this->parseNamedRequestType($reflectionType, $method);
 
-            foreach ($parsedType->queryParams as $name => $schema) {
+            foreach ($parsedType->queryParams as $name => $propertyData) {
                 $parameters[] = new Parameter(
                     name: $name,
                     in: 'query',
-                    // This does not work with nullable properties becuase the schema does not have a
-                    // required property. This data, along with "description" will have to be pulled
-                    // up from the property class. This should probably be done with a wrapper on the
-                    // schema
-                    required: !$reflectionType->allowsNull() && !$parsedType->allowsNull,
-                    schema: $schema,
+                    required: !$reflectionType->allowsNull()
+                        && !$parsedType->allowsNull
+                        && !$propertyData->allowsNull,
+                    schema: $propertyData->schema,
+                    description: $propertyData->description,
                 );
             }
 
@@ -257,6 +261,7 @@ class GenerateSwaggerDocs
                 return null;
             }
 
+            // TODO: Request object descriptions
             return new RequestBody(
                 required: !$reflectionType->allowsNull(),
                 content: $content,
@@ -284,7 +289,12 @@ class GenerateSwaggerDocs
             }
 
             if ($paramType->type === InputParamType::Query) {
-                $queryContent[$paramType->name] = $this->getSchemaFromClass($propertyType);
+                $queryContent[$paramType->name] = new RequestObjectQueryParam(
+                    schema: $this->getSchemaFromClass($propertyType),
+                    allowsNull: $propertyType->allowsNull()
+                        || $paramType->hasDefaultValue,
+                    description: '' // TODO: Add description attribute to the property
+                );
             } elseif ($paramType->type === InputParamType::Json) {
                 if ($inputContentType === null) {
                     $inputContentType = InputParamType::Json;

@@ -1,6 +1,7 @@
 {
     "name": "schentrup-software/php-api-sample",
     "type": "project",
+    "minimum-stability": "dev",
     "autoload": {
         "psr-4": {
             "PhpApiSample\\": "src/"

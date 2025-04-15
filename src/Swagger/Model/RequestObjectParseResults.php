@@ -7,7 +7,7 @@ use PhpApi\Enum\InputParamType;
 class RequestObjectParseResults
 {
     /**
-     * @param array<string, Schema> $queryParams
+     * @param array<string, RequestObjectQueryParam> $queryParams
      * @param array<string, Schema> $inputContent
      */
     public function __construct(

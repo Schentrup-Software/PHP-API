@@ -14,7 +14,7 @@ abstract class AbstractRequest
     ) {
         $this->request = $request;
 
-        $paramTypes = RequestParser::getParamTypes(self::class, $this->request->method->name);
+        $paramTypes = RequestParser::getParamTypes($this::class, $this->request->method->name);
 
         foreach ($paramTypes as $paramType) {
             if ($paramType->type === InputParamType::Query) {
