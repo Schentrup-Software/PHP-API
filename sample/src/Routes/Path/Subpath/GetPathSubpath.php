@@ -25,10 +25,12 @@ class GetPathSubpath
 
 class GetRequest extends AbstractRequest
 {
-    #[SwaggerDescription('someVar description')]
-    public ?int $someVar;
-
-    public string $someMessage = 'Has a default value';
+    public function __construct(
+        #[SwaggerDescription('someVar description')]
+        public int $someVar = 12,
+        public string $someMessage = 'Has a default value',
+    ) {
+    }
 }
 
 class GetResponse extends AbstractJsonResponse

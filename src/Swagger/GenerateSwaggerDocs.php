@@ -312,7 +312,7 @@ class GenerateSwaggerDocs
             } elseif ($paramType->type === InputParamType::Json) {
                 if ($inputContentType === null) {
                     $inputContentType = InputParamType::Json;
-                } else {
+                } elseif ($inputContentType === InputParamType::Input) {
                     throw new InvalidArgumentException("Cannot have both json and input params in the same request");
                 }
 
@@ -320,7 +320,7 @@ class GenerateSwaggerDocs
             } elseif ($paramType->type === InputParamType::Input) {
                 if ($inputContentType === null) {
                     $inputContentType = InputParamType::Input;
-                } else {
+                } elseif ($inputContentType === InputParamType::Json) {
                     throw new InvalidArgumentException("Cannot have both json and input params in the same request");
                 }
 

@@ -11,21 +11,106 @@ use Sapien\Request;
 
 class RequestParser
 {
+    public static function generateRequest(
+        Request $request,
+        string $requestClass,
+        string $method,
+    ): AbstractRequest {
+        if (!class_exists($requestClass)) {
+            throw new InvalidArgumentException("Request class $requestClass does not exist");
+        }
+
+        $propertyTypes = self::getParamTypes($requestClass, $method);
+        $cacheJsonContent = null;
+        $constructorArgs = array_map(
+            fn (RequestProperty $propertyType) => self::getConstructorArgument($request, $propertyType, $cacheJsonContent),
+            $propertyTypes,
+        );
+
+        /** @var AbstractRequest $parsedRequest */
+        $parsedRequest = new $requestClass(...$constructorArgs);
+        $parsedRequest->setRequest($request);
+
+        return $parsedRequest;
+    }
+
+    private static function getConstructorArgument(
+        Request $request,
+        RequestProperty $propertyType,
+        ?array &$cacheJsonContent,
+    ): mixed {
+        if ($propertyType->type === InputParamType::Json && !isset($cacheJsonContent)) {
+            $cacheJsonContent = $request->content->getParsedBody() ?? [];
+        }
+
+        if (!empty($propertyType->subProperties)) {
+            $content = match ($propertyType->type) {
+                InputParamType::Query => $request->query,
+                InputParamType::Json => $cacheJsonContent,
+                InputParamType::Input => $request->input,
+            };
+
+            $subItemConstructorArgs = array_map(
+                fn (RequestProperty $subProperty) => self::getSubObjectConstructorArguments($subProperty, $content[$propertyType->name] ?? []),
+                $propertyType->subProperties,
+            );
+
+            return new ($propertyType->reflectionType->getName())(...$subItemConstructorArgs);
+        } else {
+            if ($propertyType->type === InputParamType::Query) {
+                return $request->query[$propertyType->name] ?? $propertyType->defaultValue;
+            } elseif ($propertyType->type === InputParamType::Json) {
+                return $cacheJsonContent[$propertyType->name] ?? $propertyType->defaultValue;
+            } elseif ($propertyType->type === InputParamType::Input) {
+                return $request->input[$propertyType->name] ?? $propertyType->defaultValue;
+            }
+        }
+
+        return $propertyType->defaultValue;
+    }
+
+    private static function getSubObjectConstructorArguments(
+        RequestProperty $propertyType,
+        array $content,
+    ): mixed {
+        if (!empty($propertyType->subProperties)) {
+            $subItemConstructorArgs = array_map(
+                fn (RequestProperty $subProperty) => self::getSubObjectConstructorArguments($subProperty, $content[$propertyType->name] ?? []),
+                $propertyType->subProperties,
+            );
+
+            return new ($propertyType->reflectionType->getName())(...$subItemConstructorArgs);
+        } else {
+            return $content[$propertyType->name] ?? $propertyType->defaultValue;
+        }
+    }
+
     /**
      * @return RequestProperty[]
      * @throws InvalidArgumentException
      */
-    public static function getParamTypes(string $requestClass, ?string $method): array
+    public static function getParamTypes(string $requestClass, ?string $httpMethod, bool $isTopLevelClass = true): array
     {
-        if ($method === null) {
+        if ($httpMethod === null) {
             throw new InvalidArgumentException('Method cannot be null when getting param types for request');
         }
 
+        $reflectionClass = new ReflectionClass($requestClass);
+        if ($isTopLevelClass && !$reflectionClass->isSubclassOf(AbstractRequest::class)) {
+            throw new InvalidArgumentException("Parameter $requestClass is not a subclass of " . AbstractRequest::class);
+        }
+
+        $constructor = $reflectionClass->getConstructor();
+
+        if ($constructor === null) {
+            throw new InvalidArgumentException("Request class $requestClass does not have a constructor");
+        }
+
+        $constructorParams = $constructor->getParameters();
         $result = [];
 
-        $reflectionClass = new ReflectionClass($requestClass);
-        $properties = $reflectionClass->getProperties();
-        foreach ($properties as $property) {
+        foreach ($constructorParams as $param) {
+            $property = $reflectionClass->getProperty($param->getName());
             $propertyType = $property->getType();
 
             if (!($propertyType instanceof ReflectionNamedType)) {
@@ -40,7 +125,7 @@ class RequestParser
             foreach ($attributes as $attribute) {
                 $attributeInstance = $attribute->newInstance();
                 $inputParamType = InputParamType::fromClassInstance($attributeInstance);
-                if ($inputParamType === null) {
+                if ($inputParamType === null || empty($attributeInstance->name)) {
                     continue;
                 }
                 $name = $attributeInstance->name;
@@ -52,16 +137,23 @@ class RequestParser
             }
 
             if (!isset($inputParamType)) {
-                $inputParamType = in_array(strtoupper($method), HttpMethod::getQueryOnlyMethods())
+                $inputParamType = in_array(strtoupper($httpMethod), HttpMethod::getQueryOnlyMethods())
                     ? InputParamType::Query
                     : InputParamType::Json;
+            }
+
+            if (!$propertyType->isBuiltin()) {
+                $subProperties = RequestParser::getParamTypes($propertyType->getName(), $httpMethod, false);
             }
 
             $result[] = new RequestProperty(
                 name: $name,
                 propertyName: $property->getName(),
                 type: $inputParamType,
-                hasDefaultValue: $property->hasDefaultValue(),
+                hasDefaultValue: $param->isOptional() || $property->hasDefaultValue(),
+                defaultValue: $param->isOptional() ? $param->getDefaultValue() : null,
+                subProperties: $subProperties ?? [],
+                reflectionType: $propertyType,
             );
         }
 

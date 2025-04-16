@@ -9,6 +9,7 @@ use PhpApi\Enum\RouterExceptions;
 use PhpApi\Interface\IRequestMiddleware;
 use PhpApi\Interface\IResponseMiddleware;
 use PhpApi\Model\Request\AbstractRequest;
+use PhpApi\Model\Request\RequestParser;
 use PhpApi\Model\Response\AbstractResponse;
 use PhpApi\Model\RouterOptions;
 use PhpApi\Model\SwaggerOptions;
@@ -78,18 +79,18 @@ class Router
             $request = new Request();
         }
 
-        $method = $request->method->name ?? 'GET';
+        $httpMethod = $request->method->name ?? 'GET';
         $path = $request->url->path ?? '';
 
         if ($this->swaggerOptions->enabled
-            && isset(self::StaticRoutes[$method][$path])
+            && isset(self::StaticRoutes[$httpMethod][$path])
         ) {
-            $method = self::StaticRoutes[$method][$path];
+            $method = self::StaticRoutes[$httpMethod][$path];
             $this->$method();
             return;
         }
 
-        $route = $this->autoRoute->getRouter()->route($method, $path);
+        $route = $this->autoRoute->getRouter()->route($httpMethod, $path);
 
         if ($route->error != null) {
             $routerException = RouterExceptions::fromRouterException($route->error);
@@ -132,11 +133,7 @@ class Router
 
             if (!$parameterType->isBuiltin()) {
                 $parameterClass = $parameterType->getName();
-                $paramerClassReflection = new ReflectionClass($parameterClass);
-                if (!$paramerClassReflection->isSubclassOf(AbstractRequest::class)) {
-                    throw new InvalidArgumentException("Parameter $parameterClass is not a subclass of " . AbstractRequest::class);
-                }
-                $request = new $parameterClass($request);
+                $request = RequestParser::generateRequest($request, $parameterClass, $httpMethod);
 
                 foreach ($this->requestMiddlewares as $middleware) {
                     $request = $middleware->handleRequest($request);
