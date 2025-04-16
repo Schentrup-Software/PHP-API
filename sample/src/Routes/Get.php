@@ -5,7 +5,10 @@ namespace PhpApiSample\Routes;
 use PhpApi\Model\Response\AbstractJsonResponse;
 use PhpApi\Swagger\Attribute\SwaggerDescription;
 use PhpApi\Swagger\Attribute\SwaggerSummary;
+use PhpApi\Swagger\Attribute\SwaggerTag;
 
+#[SwaggerTag(name: 'Get', description: 'Get example')]
+#[SwaggerTag(name: 'Get2', description: 'Get example2')]
 class Get
 {
     #[SwaggerSummary('Get a subpath summary')]
@@ -13,7 +16,6 @@ class Get
     public function execute(): GetResponse
     {
         $response = new GetResponse();
-        $response->setCode(200);
         return $response;
     }
 }

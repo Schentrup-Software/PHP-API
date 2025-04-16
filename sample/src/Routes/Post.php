@@ -4,7 +4,9 @@ namespace PhpApiSample\Routes;
 
 use PhpApi\Model\Request\AbstractRequest;
 use PhpApi\Model\Response\AbstractJsonResponse;
+use PhpApi\Swagger\Attribute\SwaggerTag;
 
+#[SwaggerTag(name: 'Post', description: 'Post example')]
 class Post
 {
     public function execute(PostRequest $request): PostResponse

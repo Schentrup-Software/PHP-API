@@ -3,7 +3,9 @@
 namespace PhpApiSample\Routes\Path;
 
 use PhpApi\Model\Response\AbstractJsonResponse;
+use PhpApi\Swagger\Attribute\SwaggerTag;
 
+#[SwaggerTag(name: 'Get', description: 'Get example')]
 class GetPath
 {
     public function execute($_, int $pathVar): GetResponse

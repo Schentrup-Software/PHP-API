@@ -9,6 +9,6 @@ A basic api framework for PHP. It uses classes for request and responses to make
  - [x] Request objects
  - [x] Response objects
  - [ ] Sample project
- - [ ] Auto generating Swagger documention
+ - [x] Auto generating Swagger documention
  - [ ] Documention
  - [ ] Publish as composer package
