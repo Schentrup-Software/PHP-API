@@ -44,14 +44,18 @@ class RequestParser
         }
 
         if (!empty($propertyType->subProperties)) {
-            $content = match ($propertyType->type) {
+            $content = (match ($propertyType->type) {
                 InputParamType::Query => $request->query,
                 InputParamType::Json => $cacheJsonContent,
                 InputParamType::Input => $request->input,
-            };
+            })[$propertyType->name] ?? null;
+
+            if (!is_array($content)) {
+                return $propertyType->defaultValue;
+            }
 
             $subItemConstructorArgs = array_map(
-                fn (RequestProperty $subProperty) => self::getSubObjectConstructorArguments($subProperty, $content[$propertyType->name] ?? []),
+                fn (RequestProperty $subProperty) => self::getSubObjectConstructorArguments($subProperty, $content),
                 $propertyType->subProperties,
             );
 

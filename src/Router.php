@@ -8,7 +8,6 @@ use InvalidArgumentException;
 use PhpApi\Enum\RouterExceptions;
 use PhpApi\Interface\IRequestMiddleware;
 use PhpApi\Interface\IResponseMiddleware;
-use PhpApi\Model\Request\AbstractRequest;
 use PhpApi\Model\Request\RequestParser;
 use PhpApi\Model\Response\AbstractResponse;
 use PhpApi\Model\RouterOptions;
