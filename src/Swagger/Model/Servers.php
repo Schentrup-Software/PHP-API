@@ -9,4 +9,12 @@ class Servers
         public readonly string $description,
     ) {
     }
+
+    public function toArray(): array
+    {
+        return [
+            'url' => $this->url,
+            'description' => $this->description,
+        ];
+    }
 }

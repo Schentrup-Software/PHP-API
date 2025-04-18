@@ -20,4 +20,31 @@ class Path
         public ?array $responses,
     ) {
     }
+
+    public function toArray(): array
+    {
+        $result = [
+            'tags' => $this->tags,
+            'summary' => $this->summary,
+            'description' => $this->description,
+            'operationId' => $this->operationId,
+            'parameters' => array_map(
+                fn ($parameter) => $parameter->toArray(),
+                $this->parameters
+            ),
+        ];
+
+        if (isset($this->requestBody)) {
+            $result['requestBody'] = $this->requestBody->toArray();
+        }
+
+        if (isset($this->responses)) {
+            $result['responses'] = [];
+            foreach ($this->responses as $response) {
+                $result['responses'][] = $response->toArray();
+            }
+        }
+
+        return $result;
+    }
 }

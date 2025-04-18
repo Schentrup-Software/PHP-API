@@ -25,7 +25,7 @@ use PhpApi\Swagger\Model\Parameter;
 use PhpApi\Swagger\Model\Path;
 use PhpApi\Swagger\Model\RequestBody;
 use PhpApi\Swagger\Model\RequestObjectParseResults;
-use PhpApi\Swagger\Model\RequestObjectQueryParam;
+use PhpApi\Swagger\Model\RequestObjectParam;
 use PhpApi\Swagger\Model\Response;
 use PhpApi\Swagger\Model\ResponseContent;
 use PhpApi\Swagger\Model\Schema;
@@ -52,31 +52,9 @@ class GenerateSwaggerDocs
     public function generate(): string
     {
         $urls = $this->autoRoute->getDumper()->dump();
-        $swaggerDocs = $this->generateSwagger($urls);
+        $swaggerDocs = $this->generateSwagger($urls)->toArray();
 
-        $toArray = function ($swaggerDoc) use (&$toArray) {
-            return array_map(
-                fn ($p) => is_object($p)
-                    ? $toArray($p)
-                    : $p,
-                (array) $swaggerDoc
-            );
-        };
-
-        $swaggerDocArray = $toArray($swaggerDocs);
-
-        $withoutNull = function ($a) use (&$withoutNull) {
-            return array_filter(
-                array_map(
-                    fn ($p) => is_array($p) ? $withoutNull($p) : $p,
-                    $a
-                ),
-                fn ($p) => !empty($p)
-            );
-        };
-        $swaggerDocArray = $withoutNull($swaggerDocArray);
-
-        $jsonResult = json_encode($swaggerDocArray);
+        $jsonResult = json_encode($swaggerDocs);
         if ($jsonResult === false) {
             throw new InvalidArgumentException('Failed to encode JSON: ' . json_last_error_msg());
         }
@@ -209,10 +187,10 @@ class GenerateSwaggerDocs
 
                     $description = $this->getItemMetadata($reflectionClass)->description;
 
-                    foreach ($parsedType->queryParams as $name => $propertyData) {
+                    foreach ($parsedType->params as $name => $propertyData) {
                         $parameters[] = new Parameter(
                             name: $name,
-                            in: 'query',
+                            in: $propertyData->paramType->toParamType(),
                             required: !$reflectionType->allowsNull()
                                 && !$parsedType->allowsNull
                                 && !$propertyData->allowsNull,
@@ -259,10 +237,10 @@ class GenerateSwaggerDocs
 
             $parsedType = $this->parseNamedRequestType($reflectionType, $method);
 
-            foreach ($parsedType->queryParams as $name => $propertyData) {
+            foreach ($parsedType->params as $name => $propertyData) {
                 $parameters[] = new Parameter(
                     name: $name,
-                    in: 'query',
+                    in: $propertyData->paramType->toParamType(),
                     required: !$reflectionType->allowsNull()
                         && !$parsedType->allowsNull
                         && !$propertyData->allowsNull,
@@ -294,7 +272,7 @@ class GenerateSwaggerDocs
 
     private function parseNamedRequestType(ReflectionNamedType $reflectionType, string $method): RequestObjectParseResults
     {
-        $queryContent = [];
+        $params = [];
         $inputContentType = null;
         $inputContent = [];
 
@@ -312,12 +290,13 @@ class GenerateSwaggerDocs
                 throw new InvalidArgumentException("Property type must be a named type. Cannot be null or union type");
             }
 
-            if ($paramType->type === InputParamType::Query) {
-                $queryContent[$paramType->name] = new RequestObjectQueryParam(
+            if (in_array($paramType->type, [InputParamType::Query, InputParamType::Header, InputParamType::Cookie], true)) {
+                $params[$paramType->name] = new RequestObjectParam(
                     schema: $this->getSchemaFromClass($propertyType),
                     allowsNull: $propertyType->allowsNull()
                         || $paramType->hasDefaultValue,
                     description: $this->getItemMetadata($property)->description,
+                    paramType: $paramType->type,
                 );
             } elseif ($paramType->type === InputParamType::Json) {
                 if ($inputContentType === null) {
@@ -339,7 +318,7 @@ class GenerateSwaggerDocs
         }
 
         return new RequestObjectParseResults(
-            queryParams: $queryContent,
+            params: $params,
             inputContentType: $inputContentType,
             inputContent: $inputContent,
             allowsNull: $reflectionType->allowsNull(),

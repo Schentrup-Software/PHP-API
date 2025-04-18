@@ -9,7 +9,6 @@ class Delete
     public function execute(): DeleteResponse
     {
         $response = new DeleteResponse();
-        $response->setCode(204);
         return $response;
     }
 }

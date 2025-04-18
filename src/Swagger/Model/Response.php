@@ -12,4 +12,20 @@ class Response
         public readonly ?array $content = null,
     ) {
     }
+
+    public function toArray(): array
+    {
+        $result = [
+            'description' => $this->description,
+        ];
+
+        if (isset($this->content)) {
+            $result['content'] = array_map(
+                fn ($contentType) => $contentType->toArray(),
+                $this->content
+            );
+        }
+
+        return $result;
+    }
 }

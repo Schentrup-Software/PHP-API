@@ -16,4 +16,33 @@ class Schema
         public readonly ?array $oneOf = null,
     ) {
     }
+
+    public function toArray(): array
+    {
+        $result = [];
+
+        if (isset($this->type)) {
+            $result['type'] = $this->type;
+        }
+
+        if (!empty($this->required)) {
+            $result['required'] = $this->required;
+        }
+
+        if (!empty($this->properties)) {
+            $result['properties'] = array_map(
+                fn ($property) => $property->toArray(),
+                $this->properties
+            );
+        }
+
+        if (!empty($this->oneOf)) {
+            $result['oneOf'] = array_map(
+                fn ($oneOf) => $oneOf->toArray(),
+                $this->oneOf
+            );
+        }
+
+        return $result;
+    }
 }

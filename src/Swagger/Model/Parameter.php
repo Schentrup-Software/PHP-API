@@ -16,4 +16,27 @@ class Parameter
         public readonly array $content = [],
     ) {
     }
+
+    public function toArray(): array
+    {
+        $result = [
+            'name' => $this->name,
+            'in' => $this->in,
+            'required' => $this->required,
+            'schema' => $this->schema->toArray(),
+        ];
+
+        if (isset($this->description)) {
+            $result['description'] = $this->description;
+        }
+
+        if (!empty($this->content)) {
+            $result['content'] = array_map(
+                fn ($contentType) => $contentType->toArray(),
+                $this->content
+            );
+        }
+
+        return $result;
+    }
 }

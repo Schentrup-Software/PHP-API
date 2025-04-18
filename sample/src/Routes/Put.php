@@ -9,7 +9,6 @@ class Put
     public function execute(): PutResponse
     {
         $response = new PutResponse();
-        $response->setCode(200);
         return $response;
     }
 }

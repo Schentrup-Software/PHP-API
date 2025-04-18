@@ -43,13 +43,16 @@ class RequestParser
             $cacheJsonContent = $request->content->getParsedBody() ?? [];
         }
 
-        if (!empty($propertyType->subProperties)) {
-            $content = (match ($propertyType->type) {
-                InputParamType::Query => $request->query,
-                InputParamType::Json => $cacheJsonContent,
-                InputParamType::Input => $request->input,
-            })[$propertyType->name] ?? null;
+        $content = (match ($propertyType->type) {
+            InputParamType::Query => $request->query[$propertyType->name] ?? null,
+            InputParamType::Json => $cacheJsonContent[$propertyType->name] ?? null,
+            InputParamType::Input => $request->input[$propertyType->name] ?? null,
+            InputParamType::Header => $request->headers[strtolower($propertyType->name)] ?? null,
+            InputParamType::Cookie => $request->cookies[$propertyType->name] ?? null,
+            default => null,
+        });
 
+        if (!empty($propertyType->subProperties)) {
             if (!is_array($content)) {
                 return $propertyType->defaultValue;
             }
@@ -60,17 +63,13 @@ class RequestParser
             );
 
             return new ($propertyType->reflectionType->getName())(...$subItemConstructorArgs);
-        } else {
-            if ($propertyType->type === InputParamType::Query) {
-                return $request->query[$propertyType->name] ?? $propertyType->defaultValue;
-            } elseif ($propertyType->type === InputParamType::Json) {
-                return $cacheJsonContent[$propertyType->name] ?? $propertyType->defaultValue;
-            } elseif ($propertyType->type === InputParamType::Input) {
-                return $request->input[$propertyType->name] ?? $propertyType->defaultValue;
-            }
         }
 
-        return $propertyType->defaultValue;
+        return $content
+            ?? $propertyType->defaultValue
+            ?? throw new InvalidArgumentException(
+                "Property {$propertyType->name} is required and not provided in request",
+            );
     }
 
     private static function getSubObjectConstructorArguments(
@@ -125,6 +124,7 @@ class RequestParser
 
             $attributes = $property->getAttributes();
             $name = null;
+            $inputParamType = null;
 
             foreach ($attributes as $attribute) {
                 $attributeInstance = $attribute->newInstance();

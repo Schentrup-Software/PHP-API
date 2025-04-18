@@ -8,4 +8,11 @@ class ResponseContent
         public Schema $schema,
     ) {
     }
+
+    public function toArray(): array
+    {
+        return [
+            'schema' => $this->schema->toArray(),
+        ];
+    }
 }

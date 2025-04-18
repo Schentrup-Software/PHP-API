@@ -11,8 +11,8 @@ use PhpApi\Swagger\Attribute\SwaggerTag;
 #[SwaggerTag(name: 'Get2', description: 'Get example2')]
 class Get
 {
-    #[SwaggerSummary('Get a subpath summary')]
-    #[SwaggerDescription('Get a base path description')]
+    #[SwaggerSummary('Retrieve a subpath summary')]
+    #[SwaggerDescription('Retrieve a base path description')]
     public function execute(): GetResponse
     {
         $response = new GetResponse();
@@ -25,8 +25,9 @@ class GetResponse extends AbstractJsonResponse
     public const ResponseCode = 200;
 
     public function __construct(
-        public string $message = 'Hello World',
-        public int $otherThing = 12,
+        public string $message = 'Operation successful',
+        public int $itemCount = 12,
+        public ?int $timestamp = null,
     ) {
     }
 }
