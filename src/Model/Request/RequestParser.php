@@ -21,9 +21,8 @@ class RequestParser
         }
 
         $propertyTypes = self::getParamTypes($requestClass, $method);
-        $cacheJsonContent = null;
         $constructorArgs = array_map(
-            fn (RequestProperty $propertyType) => self::getConstructorArgument($request, $propertyType, $cacheJsonContent),
+            fn (RequestProperty $propertyType) => self::getConstructorArgument($request, $propertyType),
             $propertyTypes,
         );
 
@@ -37,16 +36,10 @@ class RequestParser
     private static function getConstructorArgument(
         Request $request,
         RequestProperty $propertyType,
-        ?array &$cacheJsonContent,
     ): mixed {
-        if ($propertyType->type === InputParamType::Json && !isset($cacheJsonContent)) {
-            $cacheJsonContent = $request->content->getParsedBody() ?? [];
-        }
-
         $content = (match ($propertyType->type) {
             InputParamType::Query => $request->query[$propertyType->name] ?? null,
-            InputParamType::Json => $cacheJsonContent[$propertyType->name] ?? null,
-            InputParamType::Input => $request->input[$propertyType->name] ?? null,
+            InputParamType::Input, InputParamType::Json => $request->input[$propertyType->name] ?? null,
             InputParamType::Header => $request->headers[strtolower($propertyType->name)] ?? null,
             InputParamType::Cookie => $request->cookies[$propertyType->name] ?? null,
             default => null,
@@ -111,6 +104,7 @@ class RequestParser
 
         $constructorParams = $constructor->getParameters();
         $result = [];
+        $contentType = null;
 
         foreach ($constructorParams as $param) {
             $property = $reflectionClass->getProperty($param->getName());
@@ -148,6 +142,17 @@ class RequestParser
 
             if (!$propertyType->isBuiltin()) {
                 $subProperties = RequestParser::getParamTypes($propertyType->getName(), $httpMethod, false);
+            }
+
+            if (!isset($contentType) && in_array($inputParamType, [InputParamType::Input, InputParamType::Json], true)) {
+                $contentType = $inputParamType;
+            } elseif (in_array($inputParamType, [InputParamType::Input, InputParamType::Json], true)
+                && $inputParamType != $contentType
+            ) {
+                throw new InvalidArgumentException(
+                    "Request class $requestClass has conflicting input types for property $name. "
+                    . "Cannot be both $inputParamType and $contentType",
+                );
             }
 
             $result[] = new RequestProperty(

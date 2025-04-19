@@ -22,7 +22,6 @@ class PostRequest extends AbstractRequest
     public function __construct(
         #[HeaderRequestParam(name: 'X-My-Authorization')]
         public readonly string $authorization,
-        #[CookieRequestParam(name: 'X-My-Cookie')]
         public readonly string $someVar,
         public readonly string $someMessage,
         public readonly PostRequestSubObject $subObject,
