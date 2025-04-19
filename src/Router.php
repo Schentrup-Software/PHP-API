@@ -72,7 +72,7 @@ class Router
         );
     }
 
-    public function route(?Request $request = null): void
+    public function route(?Request $request = null): ?Response
     {
         if ($request === null) {
             $request = new Request();
@@ -86,7 +86,7 @@ class Router
         ) {
             $method = self::StaticRoutes[$httpMethod][$path];
             $this->$method();
-            return;
+            return null;
         }
 
         $route = $this->autoRoute->getRouter()->route($httpMethod, $path);
@@ -98,16 +98,14 @@ class Router
                 $errorHandler = fn ($r) => $this->defaultErrorHandler();
             }
 
-            print_r($route->messages);
-
             $response = $errorHandler($request);
             if ($response instanceof Response) {
-                $response->send();
+                return $response;
             } else {
                 throw new InvalidArgumentException("Error handler must return a Response object");
             }
 
-            return;
+            return null;
         }
 
         $action = ($this->controllerFactory)($route->class);
@@ -154,7 +152,7 @@ class Router
             $response = $middleware->handleResponse($response);
         }
 
-        $response->sendResponse();
+        return $response;
     }
 
     public function addMiddleware(IRequestMiddleware|IResponseMiddleware $middleware): self

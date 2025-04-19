@@ -23,4 +23,4 @@ $router = (new Router(
     new HeaderCheckMiddleware(),
 );
 
-$router->route();
+$router->route()->send();
