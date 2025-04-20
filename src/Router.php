@@ -104,8 +104,6 @@ class Router
             } else {
                 throw new InvalidArgumentException("Error handler must return a Response object");
             }
-
-            return null;
         }
 
         $action = ($this->controllerFactory)($route->class);

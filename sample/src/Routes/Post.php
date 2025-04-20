@@ -3,8 +3,6 @@
 namespace PhpApiSample\Routes;
 
 use PhpApi\Model\Request\AbstractRequest;
-use PhpApi\Model\Request\Attribute\CookieRequestParam;
-use PhpApi\Model\Request\Attribute\HeaderRequestParam;
 use PhpApi\Model\Response\AbstractJsonResponse;
 use PhpApi\Swagger\Attribute\SwaggerTag;
 
@@ -20,8 +18,6 @@ class Post
 class PostRequest extends AbstractRequest
 {
     public function __construct(
-        #[HeaderRequestParam(name: 'X-My-Authorization')]
-        public readonly string $authorization,
         public readonly string $someVar,
         public readonly string $someMessage,
         public readonly PostRequestSubObject $subObject,

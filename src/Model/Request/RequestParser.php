@@ -150,8 +150,7 @@ class RequestParser
                 && $inputParamType != $contentType
             ) {
                 throw new InvalidArgumentException(
-                    "Request class $requestClass has conflicting input types for property $name. "
-                    . "Cannot be both $inputParamType and $contentType",
+                    "Request class $requestClass has conflicting input types for property $name.",
                 );
             }
 
