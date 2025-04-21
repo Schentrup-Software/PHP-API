@@ -430,6 +430,7 @@ class GenerateSwaggerDocs
             'float' => 'number',
             'string' => 'string',
             'bool' => 'boolean',
+            'array' => 'array',
             default => throw new InvalidArgumentException("Unsupported type: " . $type),
         };
     }

@@ -72,7 +72,7 @@ class Router
         );
     }
 
-    public function route(?Request $request = null): ?Response
+    public function route(?Request $request = null): Response
     {
         if ($request === null) {
             $request = new Request();
@@ -85,8 +85,7 @@ class Router
             && isset(self::StaticRoutes[$httpMethod][$path])
         ) {
             $method = self::StaticRoutes[$httpMethod][$path];
-            $this->$method();
-            return null;
+            return $this->$method();
         }
 
         $route = $this->autoRoute->getRouter()->route($httpMethod, $path);
@@ -233,7 +232,7 @@ class Router
         return $response;
     }
 
-    private function handleSwaggerJson(): void
+    private function handleSwaggerJson(): Response
     {
         $response = new Response();
         $response->setCode(200);
@@ -243,15 +242,15 @@ class Router
             $this->routerOptions,
             $this->swaggerOptions,
         ))->generate());
-        $response->send();
+        return $response;
     }
 
-    private function handleSwaggerPage(): void
+    private function handleSwaggerPage(): Response
     {
         $response = new Response();
         $response->setCode(200);
         $response->setHeader('Content-Type', 'text/html');
         $response->setContent(file_get_contents(__DIR__ . '/Swagger/index.html'));
-        $response->send();
+        return $response;
     }
 }

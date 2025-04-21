@@ -15,7 +15,7 @@ abstract class AbstractResponse extends Response
     /** @var ?int ResponseCode */
     public const ResponseCode = null;
 
-    public function sendResponse(): void
+    public function send(): void
     {
         if (!in_array($this::ContentType, ContentType::cases(), true)) {
             throw new RuntimeException('Content type is not set for ' . $this::class);
@@ -33,7 +33,7 @@ abstract class AbstractResponse extends Response
             $this::ContentType->value,
         );
         $this->setCode($this::ResponseCode ?? 200);
-        $this->send();
+        parent::send();
     }
 
     /**
